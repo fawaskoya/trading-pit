@@ -39,7 +39,7 @@ select public.apply_round_prices('a0000000-0000-0000-0000-000000000001', '[{"com
 select pg_temp.logout();
 
 -- Alpha = 50k + 50×1200 = 110k ; Beta = 100k
-select results_eq($$select name, rank::int, total_value from public.leaderboard_view order by rank$$,
+select results_eq($$select name, rank::int, total_value from public.leaderboard_view where event_id = 'e0000000-0000-0000-0000-000000000001' order by rank$$,
                   $$values ('Alpha', 1, 110000::numeric), ('Beta', 2, 100000::numeric)$$, 'leaderboard ranks by portfolio value');
 select is((select change_this_round from public.leaderboard_view where name = 'Alpha'), 10000::numeric, 'Δ this round vs starting capital');
 select is((select status from public.events where id = 'e0000000-0000-0000-0000-000000000001'), 'finished', 'final round finishes the event');
@@ -47,7 +47,7 @@ select is((select count(*) from public.portfolio_snapshots where round_id = 'a00
 
 -- anon can read the leaderboard but not teams/holdings
 set local role anon;
-select is((select count(*) from public.leaderboard_view), 2::bigint, 'anon reads leaderboard view');
+select is((select count(*) from public.leaderboard_view where event_id = 'e0000000-0000-0000-0000-000000000001'), 2::bigint, 'anon reads leaderboard view');
 select is((select count(*) from public.teams), 0::bigint, 'anon sees no team rows');
 select is(public.is_event_admin('e0000000-0000-0000-0000-000000000001'), false, 'anon may call is_event_admin (Realtime evaluates policies as anon)');
 select is(public.my_team_id(), null, 'anon may call my_team_id');
@@ -58,7 +58,7 @@ select pg_temp.login('00000000-0000-0000-0000-00000000000a');
 select is((select state from public.undo_last_price_application('a0000000-0000-0000-0000-000000000001')), 'window_closed', 'undo returns round to window_closed');
 select pg_temp.logout();
 select is((select current_price from public.companies where id = 'c0000000-0000-0000-0000-000000000001'), 1000::numeric, 'undo restores the price');
-select is((select count(*) from public.portfolio_snapshots), 0::bigint, 'undo removes snapshots');
+select is((select count(*) from public.portfolio_snapshots where round_id = 'a0000000-0000-0000-0000-000000000001'), 0::bigint, 'undo removes snapshots');
 
 select * from finish();
 rollback;
