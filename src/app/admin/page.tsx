@@ -3,15 +3,14 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { supabaseServer } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/server";
 import { SignOutButton } from "./sign-out-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
 
 export default async function AdminHome() {
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getSessionUser();
   if (!user || user.is_anonymous) redirect("/admin/login");
   const { data: events } = await supabase.from("events").select("id, name, status, total_rounds, created_at").eq("created_by", user.id).order("created_at", { ascending: false });
 

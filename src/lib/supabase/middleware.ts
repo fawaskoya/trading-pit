@@ -18,8 +18,11 @@ export async function updateSession(request: NextRequest) {
       },
     },
   );
-  // Do not remove: this call refreshes expired tokens.
-  const { data: { user } } = await supabase.auth.getUser();
+  // Do not remove: this refreshes expired tokens and writes the new cookies.
+  // We read the user from the (server-refreshed) session rather than calling /user on every request —
+  // RLS enforces access on every query; this check only decides where to send the browser.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const path = request.nextUrl.pathname;
   const isAdminArea = path.startsWith("/admin") && !path.startsWith("/admin/login");

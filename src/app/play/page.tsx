@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header";
 import { Card } from "@/components/ui/card";
-import { supabaseServer } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/server";
 import { JoinForm } from "./join-form";
 import { PlayScreen } from "./play-screen";
 
@@ -9,8 +9,7 @@ export const metadata = { title: "Play" };
 
 export default async function PlayPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
   const { code } = await searchParams;
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { supabase, user } = await getSessionUser();
   const { data: team } = user ? await supabase.from("teams").select("*").eq("user_id", user.id).maybeSingle() : { data: null };
 
   if (!team) {

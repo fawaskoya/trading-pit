@@ -22,3 +22,15 @@ export async function supabaseServer() {
     },
   );
 }
+
+/**
+ * Who is signed in, read from the session cookie without a round trip to the auth server.
+ * Safe for deciding what to render: every query still carries the JWT and is enforced by RLS,
+ * so a forged cookie can only ever see what an anonymous user sees. Server Actions that mutate
+ * still call `auth.getUser()` for a server-verified identity.
+ */
+export async function getSessionUser() {
+  const supabase = await supabaseServer();
+  const { data: { session } } = await supabase.auth.getSession();
+  return { supabase, user: session?.user ?? null };
+}

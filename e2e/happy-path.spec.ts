@@ -10,9 +10,10 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const service = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-const ADMIN = { email: `e2e-admin-${Date.now()}@tradingpit.local`, password: "e2e-password" };
+const ADMIN = { email: "", password: "e2e-password" };
 
 async function seed() {
+  ADMIN.email = `e2e-admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tradingpit.local`;
   const { data: u, error: uErr } = await service.auth.admin.createUser({ ...ADMIN, email_confirm: true });
   if (uErr) throw uErr;
   const { data: event } = await service.from("events").insert({ name: `E2E ${Date.now()}`, created_by: u.user.id, total_rounds: 1, round_duration_sec: 120, starting_capital: 1_000_000 }).select().single().throwOnError();
