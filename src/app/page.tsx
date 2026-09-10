@@ -1,103 +1,72 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Gamepad2, MonitorPlay, ShieldCheck } from "lucide-react";
+import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { supabaseServer } from "@/lib/supabase/server";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+const TAPE = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "AIRTEL", "ITC", "LT", "MARUTI", "TATAMOTORS", "SUNPHARMA", "WIPRO", "ADANIPORTS"];
+
+export default async function Home() {
+  const supabase = await supabaseServer();
+  const { data: live } = await supabase.from("events").select("id, name, status").eq("status", "live").order("created_at", { ascending: false }).limit(3);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="pit-hero min-h-dvh">
+      <SiteHeader />
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-12 sm:pt-20">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Live market simulation</p>
+        <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.05] sm:text-6xl">
+          Read the headline. <br className="hidden sm:block" />Make the call. <span className="text-primary">Beat the hall.</span>
+        </h1>
+        <p className="mt-5 max-w-xl text-lg text-muted-foreground">
+          Every round, a news headline drops and the trading window opens. Buy, sell or hold — then watch the prices move on the big screen.
+        </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <div className="ticker-tape mt-10 overflow-hidden rounded-xl border bg-card/60 py-2 font-mono text-sm">
+          <div className="animate-tape flex w-max gap-8 whitespace-nowrap px-4">
+            {[...TAPE, ...TAPE].map((t, i) => (
+              <span key={i} className="flex items-center gap-2">
+                <span className="font-semibold">{t}</span>
+                <span className={i % 3 === 0 ? "text-loss" : "text-gain"}>{i % 3 === 0 ? "▼" : "▲"} {(0.4 + (i % 7) * 0.9).toFixed(1)}%</span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          <Card className="group relative overflow-hidden p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
+            <Gamepad2 className="mb-4 size-8 text-primary" />
+            <h2 className="text-xl font-bold">I&apos;m playing</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Enter your team code and start trading from your phone.</p>
+            <Button className="mt-5 w-full" size="lg" render={<Link href="/play" />}>Join as a team <ArrowRight className="size-4" /></Button>
+          </Card>
+          <Card className="p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
+            <MonitorPlay className="mb-4 size-8 text-primary" />
+            <h2 className="text-xl font-bold">Projector</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Leaderboard, headline and countdown for the whole hall. No login.</p>
+            {live && live.length > 0 ? (
+              <div className="mt-5 space-y-2">
+                {live.map((e) => (
+                  <Button key={e.id} variant="secondary" className="w-full justify-between" render={<Link href={`/display/${e.id}`} />}>
+                    {e.name} <ArrowRight className="size-4" />
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">No event is live right now. The organiser shares this link.</p>
+            )}
+          </Card>
+          <Card className="p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
+            <ShieldCheck className="mb-4 size-8 text-primary" />
+            <h2 className="text-xl font-bold">Organiser</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Set up companies, write headlines, run the rounds.</p>
+            <Button variant="outline" className="mt-5 w-full" size="lg" render={<Link href="/admin" />}>Admin console</Button>
+          </Card>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
