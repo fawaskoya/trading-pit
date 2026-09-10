@@ -10,6 +10,8 @@ A live stock-market simulation for college fests. Teams log in on their phones, 
 | Organiser | `/admin` | Email + password |
 | Projector | `/display/<eventId>` | Public, no login, dark full-screen |
 
+**Production:** https://trading-pit.vercel.app (Vercel, Mumbai) · database: Supabase `flwwcppnhfbhhjjdvyri` (Mumbai, `ap-south-1`).
+
 Organisers: jump to [docs/ORGANISER_GUIDE.md](docs/ORGANISER_GUIDE.md) for the one-page run-of-show.
 
 ---
@@ -72,7 +74,7 @@ Useful scripts:
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    
    (`SUPABASE_SERVICE_ROLE_KEY` is only needed locally for seeding — do not add it to Vercel.)
-5. **Supabase → Authentication → URL configuration:** set *Site URL* to your Vercel domain.
+5. **Site URL:** `SUPABASE_SITE_URL=https://<your-domain> supabase config push` (or set it in *Authentication → URL configuration*).
 
 That's it — no paid services. The projector URL is `https://<your-domain>/display/<eventId>` (linked from the admin header).
 
