@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { applyPrices, closeWindow, openWindow, releaseHeadline, undoPrices } from "../actions";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
-type Round = Database["public"]["Tables"]["rounds"]["Row"];
+type Round = Database["public"]["Tables"]["rounds"]["Row"] & { suggested_moves: string | null };
 type Company = Database["public"]["Tables"]["companies"]["Row"];
 type Leader = Database["public"]["Views"]["leaderboard_view"]["Row"];
 type FeedOrder = { id: number; side: "buy" | "sell"; shares: number; price: number; value: number; created_at: string; team: { name: string | null; join_code: string } | null; company: { ticker: string } | null };
@@ -155,6 +155,7 @@ function ActiveRound({ event, round, companies, pending, run, onZero }: {
             <p className="mt-1 text-muted-foreground">No headline for this round. <Link href={`/admin/${event.id}/headlines`} className="text-primary underline-offset-4 hover:underline">Write one</Link></p>
           )}
           {round.headline_detail && <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{round.headline_detail}</p>}
+          {round.suggested_moves && <p className="mt-2 text-xs text-primary"><span className="font-semibold">Private hint:</span> {round.suggested_moves}</p>}
         </div>
 
         {s === "pending" && (
@@ -193,12 +194,11 @@ function Step({ hint, children }: { hint: string; children: React.ReactNode }) {
   );
 }
 
-/** Parses "Suggested moves: TCS -7%, INFY +3%" out of the headline detail so the organiser can fill with one click. */
-function parseSuggested(detail: string | null): Record<string, number> {
+/** Parses "TCS -7%, INFY +3%" so the organiser can fill prices with one click. */
+function parseSuggested(text: string | null): Record<string, number> {
   const out: Record<string, number> = {};
-  const m = detail?.match(/suggested moves?:\s*(.+)$/im);
-  if (!m) return out;
-  for (const part of m[1].split(/,|;/)) {
+  if (!text) return out;
+  for (const part of text.replace(/^\s*suggested moves?:/i, "").split(/,|;|\n/)) {
     const mm = part.trim().match(/^([A-Z0-9&.-]+)\s*([+-]?\d+(?:\.\d+)?)\s*%?$/i);
     if (mm) out[mm[1].toUpperCase()] = Number(mm[2]);
   }
@@ -208,7 +208,7 @@ function parseSuggested(detail: string | null): Record<string, number> {
 function PriceEditor({ round, companies, pending, run }: { round: Round; companies: Company[]; pending: boolean; run: (label: string, fn: () => Promise<{ ok: boolean; error?: string }>) => void }) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"price" | "pct">("pct");
-  const suggested = useMemo(() => parseSuggested(round.headline_detail), [round.headline_detail]);
+  const suggested = useMemo(() => parseSuggested(round.suggested_moves), [round.suggested_moves]);
 
   const newPriceOf = (c: Company): number | null => {
     const raw = inputs[c.id];

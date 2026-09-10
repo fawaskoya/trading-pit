@@ -114,6 +114,8 @@ export async function saveHeadline(input: unknown): Promise<ActionResult> {
     const d = headlineSchema.parse(input);
     const { data, error } = await supabase.from("rounds").update({ headline: d.headline || null, headline_detail: d.headline_detail || null }).eq("id", d.round_id).select("event_id").single();
     if (error) throw error;
+    const { error: nErr } = await supabase.from("round_notes").upsert({ round_id: d.round_id, suggested_moves: d.suggested_moves || null, updated_at: new Date().toISOString() });
+    if (nErr) throw nErr;
     revalidatePath(`/admin/${data.event_id}`, "layout");
     return { ok: true };
   } catch (e) { return fail(e); }

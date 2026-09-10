@@ -116,16 +116,18 @@ async function main() {
   );
   if (cErr) throw cErr;
 
-  const { error: rErr } = await db.from("rounds").insert(
-    HEADLINES.map((h, i) => ({
-      event_id: event.id,
-      round_no: i + 1,
-      headline: h.headline,
-      headline_detail: h.detail + "\n\nSuggested moves: " +
-        Object.entries(h.moves).map(([t, p]) => `${t} ${p > 0 ? "+" : ""}${p}%`).join(", "),
+  const { data: rounds, error: rErr } = await db.from("rounds").insert(
+    HEADLINES.map((h, i) => ({ event_id: event.id, round_no: i + 1, headline: h.headline, headline_detail: h.detail })),
+  ).select("id, round_no");
+  if (rErr) throw rErr;
+  // Private organiser hints live in round_notes, which teams can never read.
+  const { error: nErr } = await db.from("round_notes").insert(
+    (rounds ?? []).map((r) => ({
+      round_id: r.id,
+      suggested_moves: Object.entries(HEADLINES[r.round_no - 1].moves).map(([t, p]) => `${t} ${p > 0 ? "+" : ""}${p}%`).join(", "),
     })),
   );
-  if (rErr) throw rErr;
+  if (nErr) throw nErr;
 
   const { data: teams, error: tErr } = await db
     .from("teams")

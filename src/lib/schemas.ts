@@ -23,6 +23,7 @@ export const headlineSchema = z.object({
   round_id: z.string().uuid(),
   headline: z.string().trim().max(200).nullable(),
   headline_detail: z.string().trim().max(2000).nullable(),
+  suggested_moves: z.string().trim().max(500).nullable().optional(),
 });
 
 export const pricesSchema = z.array(z.object({

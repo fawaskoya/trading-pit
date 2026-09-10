@@ -322,6 +322,32 @@ export type Database = {
           },
         ]
       }
+      round_notes: {
+        Row: {
+          round_id: string
+          suggested_moves: string | null
+          updated_at: string
+        }
+        Insert: {
+          round_id: string
+          suggested_moves?: string | null
+          updated_at?: string
+        }
+        Update: {
+          round_id?: string
+          suggested_moves?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_notes_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: true
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rounds: {
         Row: {
           applied_at: string | null
