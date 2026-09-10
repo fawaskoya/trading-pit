@@ -41,7 +41,7 @@ export default async function Home() {
             <Gamepad2 className="mb-4 size-8 text-primary" />
             <h2 className="text-xl font-bold">I&apos;m playing</h2>
             <p className="mt-1 text-sm text-muted-foreground">Enter your team code and start trading from your phone.</p>
-            <Button className="mt-5 w-full" size="lg" render={<Link href="/play" />}>Join as a team <ArrowRight className="size-4" /></Button>
+            <Button className="mt-5 w-full" size="lg" nativeButton={false} render={<Link href="/play" />}>Join as a team <ArrowRight className="size-4" /></Button>
           </Card>
           <Card className="p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
             <MonitorPlay className="mb-4 size-8 text-primary" />
@@ -50,7 +50,7 @@ export default async function Home() {
             {live && live.length > 0 ? (
               <div className="mt-5 space-y-2">
                 {live.map((e) => (
-                  <Button key={e.id} variant="secondary" className="w-full justify-between" render={<Link href={`/display/${e.id}`} />}>
+                  <Button key={e.id} variant="secondary" className="w-full justify-between" nativeButton={false} render={<Link href={`/display/${e.id}`} />}>
                     {e.name} <ArrowRight className="size-4" />
                   </Button>
                 ))}
@@ -63,7 +63,7 @@ export default async function Home() {
             <ShieldCheck className="mb-4 size-8 text-primary" />
             <h2 className="text-xl font-bold">Organiser</h2>
             <p className="mt-1 text-sm text-muted-foreground">Set up companies, write headlines, run the rounds.</p>
-            <Button variant="outline" className="mt-5 w-full" size="lg" render={<Link href="/admin" />}>Admin console</Button>
+            <Button variant="outline" className="mt-5 w-full" size="lg" nativeButton={false} render={<Link href="/admin" />}>Admin console</Button>
           </Card>
         </div>
       </main>

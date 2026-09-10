@@ -24,7 +24,7 @@ export default async function AdminHome() {
             <h1 className="text-3xl font-extrabold">Your events</h1>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
-          <Button render={<Link href="/admin/new" />}>New event</Button>
+          <Button nativeButton={false} render={<Link href="/admin/new" />}>New event</Button>
         </div>
         <div className="mt-6 grid gap-3">
           {events?.length ? events.map((e) => (
@@ -33,7 +33,7 @@ export default async function AdminHome() {
                 <p className="font-semibold">{e.name}</p>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">{e.status} · {e.total_rounds} rounds</p>
               </div>
-              <Button variant="secondary" render={<Link href={`/admin/${e.id}`} />}>Open</Button>
+              <Button variant="secondary" nativeButton={false} render={<Link href={`/admin/${e.id}`} />}>Open</Button>
             </Card>
           )) : (
             <Card className="p-8 text-center text-muted-foreground">No events yet. Create one to get started.</Card>

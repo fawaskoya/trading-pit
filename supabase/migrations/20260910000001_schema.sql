@@ -75,8 +75,8 @@ create table public.teams (
   name         text check (name is null or length(name) between 1 and 40),
   college      text,
   member_names text[] not null default '{}',
-  cash         numeric(18,2) not null,
-  join_code    text not null unique check (join_code ~ '^[A-Z0-9]{6}$'),
+  cash         numeric(18,2) not null default 0,   -- 0 = "fill from event" (see trigger)
+  join_code    text not null default '' unique check (join_code ~ '^[A-Z0-9]{6}$'), -- '' = generate (see trigger)
   user_id      uuid unique references auth.users(id) on delete set null,
   joined_at    timestamptz,
   created_at   timestamptz not null default now()
@@ -90,10 +90,10 @@ declare
   alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- no 0/O/1/I
   code text;
 begin
-  if new.cash is null then
+  if new.cash is null or new.cash = 0 then
     select starting_capital into new.cash from public.events where id = new.event_id;
   end if;
-  if new.join_code is null then
+  if new.join_code is null or new.join_code = '' then
     loop
       code := '';
       for i in 1..6 loop

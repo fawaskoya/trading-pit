@@ -380,12 +380,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          cash: number
+          cash?: number
           college?: string | null
           created_at?: string
           event_id: string
           id?: string
-          join_code: string
+          join_code?: string
           joined_at?: string | null
           member_names?: string[]
           name?: string | null
