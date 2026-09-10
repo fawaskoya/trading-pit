@@ -66,8 +66,10 @@ grant execute on function public.server_time()            to anon, authenticated
 grant execute on function public.close_expired_windows()  to anon, authenticated;
 grant execute on function public.claim_team(text, text)   to authenticated;
 grant execute on function public.execute_order(uuid, public.order_side, bigint) to authenticated;
-grant execute on function public.is_event_admin(uuid)     to authenticated;
-grant execute on function public.my_team_id()             to authenticated;
+-- Policy helpers must be executable by anon too: Realtime evaluates RLS policies as the
+-- subscriber's role, and an anon subscriber (the projector) would otherwise error the whole batch.
+grant execute on function public.is_event_admin(uuid)     to anon, authenticated;
+grant execute on function public.my_team_id()             to anon, authenticated;
 grant execute on function public.team_total_value(uuid)   to anon, authenticated; -- needed by leaderboard_view
 grant execute on function public.reset_team_login(uuid)   to authenticated;
 grant execute on function public.release_headline(uuid)   to authenticated;

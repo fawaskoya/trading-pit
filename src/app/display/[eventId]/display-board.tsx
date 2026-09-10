@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
@@ -17,10 +16,8 @@ type View = "leaderboard" | "headline" | "prices";
 const ROTATE_MS = 12000;
 
 export function DisplayBoard({ host, event, rounds, companies, leaders, curve, pinned }: { host: string; event: Event; rounds: Round[]; companies: Company[]; leaders: Leader[]; curve: Point[]; pinned: View | null }) {
-  const router = useRouter();
-  useEventRealtime(event.id, ["rounds", "companies"]);
-  // The projector is anonymous, so it can't subscribe to team/holdings changes — poll gently instead.
-  useEffect(() => { const id = setInterval(() => router.refresh(), 5000); return () => clearInterval(id); }, [router]);
+  // The projector is anonymous, so it can't subscribe to team/holdings changes — the hook's poll covers those.
+  useEventRealtime(event.id, ["rounds", "companies"], undefined, 5000);
 
   const active = rounds.find((r) => r.state !== "prices_applied") ?? null;
   const lastApplied = [...rounds].reverse().find((r) => r.state === "prices_applied") ?? null;

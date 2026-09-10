@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(11);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
 values ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@test.local', '', now(), now(), '{}', '{}'),
@@ -49,6 +49,8 @@ select is((select count(*) from public.portfolio_snapshots where round_id = 'a00
 set local role anon;
 select is((select count(*) from public.leaderboard_view), 2::bigint, 'anon reads leaderboard view');
 select is((select count(*) from public.teams), 0::bigint, 'anon sees no team rows');
+select is(public.is_event_admin('e0000000-0000-0000-0000-000000000001'), false, 'anon may call is_event_admin (Realtime evaluates policies as anon)');
+select is(public.my_team_id(), null, 'anon may call my_team_id');
 reset role;
 
 -- undo

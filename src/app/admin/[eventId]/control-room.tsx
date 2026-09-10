@@ -29,7 +29,7 @@ const STATE_LABEL: Record<Round["state"], string> = {
 export function ControlRoom({ event, rounds, companies, orders, leaderboard, teams }: {
   event: Event; rounds: Round[]; companies: Company[]; orders: FeedOrder[]; leaderboard: Leader[]; teams: { total: number; joined: number };
 }) {
-  useEventRealtime(event.id);
+  useEventRealtime(event.id, undefined, undefined, 6000);
   const [pending, start] = useTransition();
   const active = rounds.find((r) => r.state !== "prices_applied") ?? null;
   const lastApplied = [...rounds].reverse().find((r) => r.state === "prices_applied") ?? null;

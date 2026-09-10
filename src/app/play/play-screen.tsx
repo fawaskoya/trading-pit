@@ -31,7 +31,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   team: Team; event: Event; companies: Company[]; rounds: Round[]; holdings: Holding[]; me: Me | null; orders: Order[]; leaders: Leader[]; priceUpdates: PriceUpdate[]; snapshots: Snapshot[];
 }) {
   const router = useRouter();
-  useEventRealtime(event.id);
+  useEventRealtime(event.id, undefined, undefined, 5000);
   const [tab, setTab] = useState<"market" | "history" | "ranks">("market");
   const [selected, setSelected] = useState<Company | null>(null);
 

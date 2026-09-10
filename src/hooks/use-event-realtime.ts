@@ -9,7 +9,7 @@ type Table = "rounds" | "companies" | "teams" | "holdings" | "orders";
  * Subscribes to Postgres changes for an event and re-fetches the server-rendered page (debounced).
  * Server Components stay the single source of truth, so a refresh never shows stale or partial state.
  */
-export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "companies", "teams", "holdings", "orders"], onChange?: () => void) {
+export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "companies", "teams", "holdings", "orders"], onChange?: () => void, pollMs = 4000) {
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cb = useRef(onChange);
@@ -27,16 +27,19 @@ export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "
       const filter = table === "rounds" || table === "companies" || table === "teams" ? `event_id=eq.${eventId}` : undefined;
       channel = channel.on("postgres_changes", { event: "*", schema: "public", table, ...(filter ? { filter } : {}) }, bump);
     }
-    channel.subscribe();
+    channel.subscribe((status, err) => { if (process.env.NODE_ENV !== "production") console.debug("[realtime]", status, err?.message ?? ""); });
 
-    // Belt and braces: refresh when the tab becomes visible again (phones sleep, sockets drop).
+    // Belt and braces: refresh when the tab becomes visible again (phones sleep, sockets drop),
+    // and poll gently so a missed message can never leave a screen stale during the event.
     const onVisible = () => { if (document.visibilityState === "visible") bump(); };
     document.addEventListener("visibilitychange", onVisible);
+    const poll = pollMs > 0 ? setInterval(() => { if (document.visibilityState === "visible") router.refresh(); }, pollMs) : null;
     return () => {
+      if (poll) clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
       supabase.removeChannel(channel);
       if (timer.current) clearTimeout(timer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, tables.join(",")]);
+  }, [eventId, tables.join(","), pollMs]);
 }
