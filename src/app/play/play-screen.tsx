@@ -24,9 +24,11 @@ export type Holding = { company_id: string; shares: number };
 export type Order = { id: number; round_id: string; company_id: string; side: "buy" | "sell"; shares: number; price: number; value: number; fee: number; created_at: string };
 export type Leader = { team_id: string | null; name: string | null; rank: number | null; total_value: number | null; trade_count: number | null };
 type Me = { rank: number | null; total_value: number | null; change_this_round: number | null; pnl: number | null };
+export type PriceUpdate = { round_id: string; company_id: string; old_price: number; new_price: number };
+export type Snapshot = { round_id: string; total_value: number; cash: number; holdings_value: number };
 
-export function PlayScreen({ team, event, companies, rounds, holdings, me, orders, leaders }: {
-  team: Team; event: Event; companies: Company[]; rounds: Round[]; holdings: Holding[]; me: Me | null; orders: Order[]; leaders: Leader[];
+export function PlayScreen({ team, event, companies, rounds, holdings, me, orders, leaders, priceUpdates, snapshots }: {
+  team: Team; event: Event; companies: Company[]; rounds: Round[]; holdings: Holding[]; me: Me | null; orders: Order[]; leaders: Leader[]; priceUpdates: PriceUpdate[]; snapshots: Snapshot[];
 }) {
   const router = useRouter();
   useEventRealtime(event.id);
@@ -137,7 +139,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
             {companies.map((c) => <CompanyRow key={c.id} c={c} shares={held[c.id] ?? 0} onClick={() => setSelected(c)} />)}
           </div>
         )}
-        {tab === "history" && <HistoryTab team={team} event={event} rounds={rounds} companies={companies} orders={orders} />}
+        {tab === "history" && <HistoryTab event={event} rounds={rounds} companies={companies} orders={orders} priceUpdates={priceUpdates} snapshots={snapshots} currentTotal={total} />}
         {tab === "ranks" && <Ranks leaders={leaders} myId={team.id} />}
       </main>
 

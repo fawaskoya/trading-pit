@@ -26,7 +26,7 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
     );
   }
 
-  const [{ data: event }, { data: companies }, { data: rounds }, { data: holdings }, { data: me }, { data: orders }, { data: leaders }] = await Promise.all([
+  const [{ data: event }, { data: companies }, { data: rounds }, { data: holdings }, { data: me }, { data: orders }, { data: leaders }, { data: priceUpdates }, { data: snapshots }] = await Promise.all([
     supabase.from("events").select("*").eq("id", team.event_id).single(),
     supabase.from("companies").select("*").eq("event_id", team.event_id).order("sort_order"),
     supabase.from("rounds").select("*").eq("event_id", team.event_id).order("round_no"),
@@ -34,6 +34,8 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
     supabase.from("leaderboard_view").select("rank, total_value, change_this_round, pnl").eq("team_id", team.id).maybeSingle(),
     supabase.from("orders").select("id, round_id, company_id, side, shares, price, value, fee, created_at").eq("team_id", team.id).order("created_at", { ascending: false }),
     supabase.from("leaderboard_view").select("team_id, name, rank, total_value, trade_count").eq("event_id", team.event_id).order("rank").limit(50),
+    supabase.from("price_updates").select("round_id, company_id, old_price, new_price, rounds!inner(event_id)").eq("rounds.event_id", team.event_id),
+    supabase.from("portfolio_snapshots").select("round_id, total_value, cash, holdings_value").eq("team_id", team.id),
   ]);
   if (!event) return null;
 
@@ -47,6 +49,8 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
       me={me ?? null}
       orders={orders ?? []}
       leaders={leaders ?? []}
+      priceUpdates={(priceUpdates ?? []).map(({ round_id, company_id, old_price, new_price }) => ({ round_id, company_id, old_price, new_price }))}
+      snapshots={snapshots ?? []}
     />
   );
 }
