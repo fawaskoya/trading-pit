@@ -13,6 +13,8 @@ const FRIENDLY: Record<string, string> = {
   BAD_STATE: "That action isn't available right now.",
   PREVIOUS_ROUND_INCOMPLETE: "Finish the earlier round first.",
   NEXT_ROUND_STARTED: "The next round has already begun; prices can no longer be undone.",
+  CAPITAL_LOCKED: "Starting capital is locked once any team has traded.",
+  ROUNDS_IN_USE: "You can't remove rounds that have already started.",
   NOT_AUTHENTICATED: "Please reload the page and try again.",
 };
 

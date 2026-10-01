@@ -21,7 +21,7 @@ export function SettingsForm({ event }: { event: Event }) {
       <Card className="p-6">
         <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await updateEvent(event.id, values); if (!r.ok) toast.error(r.error); else toast.success("Settings saved"); }); }}>
           <EventSettingsFields value={values} onChange={setValues} roundsLocked={event.status !== "draft"} />
-          {event.status !== "draft" && <p className="text-sm text-muted-foreground">Starting capital applies to teams created from now on; existing teams keep their cash.</p>}
+          <p className="text-sm text-muted-foreground">Changing the starting capital re-funds every team to the new amount, so it is locked once any team has traded.</p>
           <Button type="submit" disabled={pending}>Save settings</Button>
         </form>
       </Card>
