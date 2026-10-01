@@ -35,7 +35,7 @@ Useful scripts:
 | Script | What it does |
 |---|---|
 | `pnpm db:reset` | Recreate the local database from `supabase/migrations`, then seed |
-| `pnpm db:test` | pgTAP unit tests for the trading engine (38 tests) |
+| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (44 tests) |
 | `pnpm db:types` | Regenerate `src/lib/database.types.ts` after changing the schema |
 | `pnpm test:e2e` | Playwright happy path (builds and starts a production server; needs `supabase start`) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm build` | Quality gates |
