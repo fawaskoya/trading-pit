@@ -21,7 +21,10 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
 
   const active = rounds.find((r) => r.state !== "prices_applied") ?? null;
   const lastApplied = [...rounds].reverse().find((r) => r.state === "prices_applied") ?? null;
-  const finished = !active && rounds.length > 0;
+  // The projector is anonymous and can't see pending rounds, so "no active round" may just mean
+  // "between rounds" — only the event status says the game is over.
+  const finished = event.status === "finished";
+  const upcomingNo = active?.round_no ?? (lastApplied ? Math.min(lastApplied.round_no + 1, event.total_rounds) : 1);
   const windowOpen = active?.state === "window_open";
   const secondsLeft = useCountdown(windowOpen ? active?.window_closes_at : null);
 
@@ -49,11 +52,11 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
               <p className="font-heading text-3xl font-bold">Final results</p>
             ) : (
               <>
-                <p className="text-sm uppercase tracking-[0.3em] text-white/60">Round {active?.round_no ?? "–"} of {event.total_rounds}</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-white/60">Round {upcomingNo} of {event.total_rounds}</p>
                 {windowOpen ? (
                   <Countdown closesAt={active?.window_closes_at} className={cn("font-heading text-6xl font-extrabold leading-none", secondsLeft !== null && secondsLeft <= 10 && "animate-pulse")} />
                 ) : (
-                  <p className="font-heading text-3xl font-bold text-white/80">{stateLabel(active?.state)}</p>
+                  <p className="font-heading text-3xl font-bold text-white/80">{stateLabel(active?.state ?? (lastApplied ? "pending" : undefined))}</p>
                 )}
               </>
             )}

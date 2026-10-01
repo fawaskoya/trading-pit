@@ -19,7 +19,10 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
     start(async () => {
       const supabase = supabaseBrowser();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      // An organiser testing on the same browser would otherwise bind the team to their admin
+      // account (and lock the code for the real team). Teams always use an anonymous session.
+      if (session && !session.user.is_anonymous) await supabase.auth.signOut();
+      if (!session || !session.user.is_anonymous) {
         const { error } = await supabase.auth.signInAnonymously();
         if (error) { toast.error(friendlyError(error)); return; }
       }

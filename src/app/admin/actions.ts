@@ -39,17 +39,26 @@ export async function updateEvent(eventId: string, input: unknown): Promise<Acti
   try {
     const { supabase } = await requireAdmin();
     const data = eventSchema.partial().parse(input);
+    const { data: rounds } = await supabase.from("rounds").select("id, round_no, state").eq("event_id", eventId).order("round_no");
+    const existing = rounds ?? [];
+    // Rounds that have started can't be removed: shrinking below them would leave "Round 4 of 3".
+    const lastStarted = Math.max(0, ...existing.filter((r) => r.state !== "pending").map((r) => r.round_no));
+    if (data.total_rounds && data.total_rounds < lastStarted) throw new Error("ROUNDS_IN_USE");
     const { error } = await supabase.from("events").update(data).eq("id", eventId);
     if (error) throw error;
     // Keep the rounds table in step with total_rounds (only add/remove pending rounds).
     if (data.total_rounds) {
-      const { data: rounds } = await supabase.from("rounds").select("id, round_no, state").eq("event_id", eventId).order("round_no");
-      const existing = rounds ?? [];
       const extra = existing.filter((r) => r.round_no > data.total_rounds! && r.state === "pending").map((r) => r.id);
       if (extra.length) await supabase.from("rounds").delete().in("id", extra);
       const maxNo = existing.length ? Math.max(...existing.map((r) => r.round_no)) : 0;
       if (maxNo < data.total_rounds) {
         await supabase.from("rounds").insert(Array.from({ length: data.total_rounds - maxNo }, (_, i) => ({ event_id: eventId, round_no: maxNo + i + 1 })));
+      }
+      // Cut down to rounds that are all done? Then the game is over (apply_round_prices only
+      // finishes the event when the last round is applied). Adding rounds re-opens a finished event.
+      const allDone = existing.filter((r) => r.round_no <= data.total_rounds!).every((r) => r.state === "prices_applied") && maxNo >= data.total_rounds;
+      if (lastStarted > 0) {
+        await supabase.from("events").update({ status: allDone ? "finished" : "live" }).eq("id", eventId);
       }
     }
     revalidatePath(`/admin/${eventId}`, "layout");
