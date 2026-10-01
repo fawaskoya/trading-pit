@@ -35,8 +35,11 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   const [tab, setTab] = useState<"market" | "history" | "ranks">("market");
   const [selected, setSelected] = useState<Company | null>(null);
 
+  // Teams can't see pending rounds (RLS hides unreleased headlines), so "no active round" can mean
+  // either "between rounds" or "game over" — only the event status tells them apart.
   const active = rounds.find((r) => r.state !== "prices_applied") ?? null;
-  const finished = !active && rounds.length > 0;
+  const finished = event.status === "finished";
+  const lastApplied = [...rounds].reverse().find((r) => r.state === "prices_applied") ?? null;
   const secondsLeft = useCountdown(active?.state === "window_open" ? active.window_closes_at : null);
   const tradingOpen = active?.state === "window_open" && (secondsLeft === null || secondsLeft > 0);
 
@@ -55,7 +58,10 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   const total = Number(team.cash) + invested;
   const pnl = total - Number(event.starting_capital);
   const pnlPct = (pnl / Number(event.starting_capital)) * 100;
-  const roundLabel = active ? `Round ${active.round_no} of ${event.total_rounds}` : finished ? "Final results" : "Waiting to start";
+  const roundLabel = finished ? "Final results"
+    : active ? `Round ${active.round_no} of ${event.total_rounds}`
+    : lastApplied ? `Round ${lastApplied.round_no} of ${event.total_rounds} done`
+    : "Waiting to start";
 
   return (
     <div className="min-h-dvh pb-24">
@@ -121,7 +127,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-muted-foreground">{active?.state === "pending" || !active ? "The organiser hasn't started this round yet. Sit tight." : "No headline this round — trade on your instincts."}</p>
+            <p className="mt-2 text-muted-foreground">{active?.state === "pending" || !active ? (lastApplied ? `Round ${lastApplied.round_no + 1} starts soon — watch for the next headline.` : "The organiser hasn't started this round yet. Sit tight.") : "No headline this round — trade on your instincts."}</p>
           )}
           <StateBanner state={active?.state ?? null} open={tradingOpen} finished={finished} secondsLeft={secondsLeft} />
         </Card>

@@ -18,7 +18,7 @@ export function HistoryTab({ event, rounds, companies, orders, priceUpdates, sna
     ...done.map((r) => ({ label: `R${r.round_no}`, value: Number(snapByRound[r.id]?.total_value ?? NaN) })).filter((p) => !Number.isNaN(p.value)),
   ];
   const active = rounds.find((r) => r.state !== "prices_applied");
-  if (active) curve.push({ label: "Now", value: currentTotal });
+  if (active && active.state !== "pending") curve.push({ label: "Now", value: currentTotal });
 
   if (!done.length && !orders.length) {
     return <Card className="p-5 text-sm text-muted-foreground">Your round-by-round story will appear here once the first round finishes.</Card>;
