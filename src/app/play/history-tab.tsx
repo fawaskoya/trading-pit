@@ -33,7 +33,7 @@ export function HistoryTab({ event, rounds, companies, orders, priceUpdates, sna
             <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={64} tickFormatter={(v) => compactRupees(v)} domain={["auto", "auto"]} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={80} tickFormatter={(v) => compactRupees(v)} domain={["auto", "auto"]} />
               <Tooltip formatter={(v) => rupees(Number(v))} contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "var(--muted-foreground)" }} />
               <ReferenceLine y={Number(event.starting_capital)} stroke="var(--muted-foreground)" strokeDasharray="4 4" />
               <Line type="monotone" dataKey="value" stroke="var(--primary)" strokeWidth={2.5} dot={{ r: 3, fill: "var(--primary)", strokeWidth: 0 }} activeDot={{ r: 5 }} isAnimationActive={false} />
