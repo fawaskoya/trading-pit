@@ -10,21 +10,23 @@ const q = (s: string | null | undefined) => (s == null ? "null" : `'${s.replace(
 
 const out: string[] = [];
 out.push(`-- Trading Pit: replace the old demo with the 10-round chest-number event.
--- 1. Replace YOUR_ORGANISER_EMAIL below with the email you sign in with at /login?as=organiser.
--- 2. Paste the whole script into Supabase > SQL Editor > Run. It runs as one transaction:
---    if anything fails, nothing changes.
+-- Run it with: supabase db push --linked --include-seed  (or paste it into the Supabase SQL Editor).
+-- It runs as one transaction: if anything fails, nothing changes.
 begin;
 
 do $$
 declare
   v_owner uuid;
+  v_count int;
   v_event uuid;
   v_round uuid;
 begin
-  select id into v_owner from auth.users where email = 'YOUR_ORGANISER_EMAIL' and not coalesce(is_anonymous, false);
-  if v_owner is null then
-    raise exception 'No organiser account with that email. Edit YOUR_ORGANISER_EMAIL at the top of this script.';
+  -- The event is owned by the project's organiser: the one real (non-anonymous) account.
+  select count(*) into v_count from auth.users where email is not null and not coalesce(is_anonymous, false);
+  if v_count <> 1 then
+    raise exception 'Expected exactly one organiser account but found %. Nothing was changed.', v_count;
   end if;
+  select id into v_owner from auth.users where email is not null and not coalesce(is_anonymous, false);
 
   -- The old game (teams, trades and results go with it).
   delete from public.events where name = 'Demo Fest 2026';
