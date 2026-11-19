@@ -6,7 +6,9 @@ A live stock-market simulation for college fests. Teams log in on their phones, 
 
 | Screen | URL | Who |
 |---|---|---|
-| Team | `/play` | Two students sharing one phone login (join code) |
+| Sign in | `/login` | One page for everyone: **Team** tab (6-character code) or **Organiser** tab (email + password) |
+| One-tap join | `/join/<code>` | What each team's QR code opens — joins and lands on `/play`, nothing to type |
+| Team | `/play` | Two students sharing one phone login |
 | Organiser | `/admin` | Email + password |
 | Projector | `/display/<eventId>` | Public, no login, dark full-screen |
 
@@ -29,6 +31,8 @@ pnpm dev                       # http://localhost:3000
 ```
 
 `pnpm seed` prints the admin login (`admin@tradingpit.local` / `tradingpit`), six team join codes and the projector URL.
+
+**Demo mode (local only).** With `DEMO_MODE=1` in `.env.local` and the seed in place, the home page gains a *Try the demo* panel: **Play as a guest team** (creates a fresh team and joins it), **Run it as organiser** (signs in as the seeded admin and opens the control room) and **Open the projector** — no credentials to hand out. It is off unless that variable is set, and it needs the service-role key, which is never configured on Vercel. One browser profile holds one session, so play the guest team in a private window or on a phone while the organiser console is open.
 
 Useful scripts:
 
@@ -68,7 +72,7 @@ Useful scripts:
    supabase db push
    ```
    The migrations enable `pg_cron` and the realtime publication themselves.
-3. **Create the organiser account:** either sign up from `/admin/login` on the deployed site (leave *Confirm email* on, or turn it off in Auth settings for a quick start), or run `pnpm seed` against the cloud project by putting its URL + service-role key in `.env.local` (`SEED_ADMIN_EMAIL/PASSWORD` set the login).
+3. **Create the organiser account:** either sign up from `/login` (Organiser tab) on the deployed site (leave *Confirm email* on, or turn it off in Auth settings for a quick start), or run `pnpm seed` against the cloud project by putting its URL + service-role key in `.env.local` (`SEED_ADMIN_EMAIL/PASSWORD` set the login).
 4. **Deploy to Vercel:** import the repo, framework *Next.js*, and set environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -86,10 +90,13 @@ That's it — no paid services. The projector URL is `https://<your-domain>/disp
 supabase/migrations/   schema, functions, RLS, round_notes
 supabase/tests/        pgTAP tests (execute_order edge cases, state machine, leaderboard, undo, RLS)
 scripts/seed.ts        demo data
-src/app/play           team screen (join, portfolio, market, trade drawer, history, ranks)
+src/app/login          the one sign-in page (team code / organiser tabs)
+src/app/join/[code]    one-tap join for QR codes and links
+src/app/demo           "Try the demo" panel and its server actions (DEMO_MODE=1 only)
+src/app/play           team screen (portfolio, market, trade drawer, history, ranks)
 src/app/admin          organiser console (wizard, control room, companies, headlines, teams, settings)
 src/app/display        projector board
 src/hooks              server clock / countdown, realtime + polling refresh
-src/lib                supabase clients, zod schemas, formatting, friendly error mapping
+src/lib                supabase clients, auth helpers (auth.ts, paths.ts), zod schemas, suggested-moves parser, formatting, friendly error mapping
 e2e/                   Playwright happy path
 ```

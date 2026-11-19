@@ -137,9 +137,10 @@ async function main() {
 
   console.log(`\nSeeded event "${event.name}" (${event.id})`);
   console.log(`Admin login: ${adminEmail} / ${adminPassword}`);
-  console.log("Team join codes:");
+  console.log("Team join codes (one-tap link: /join/<code>):");
   for (const t of teams ?? []) console.log(`  ${t.join_code}  ${t.name}`);
-  console.log(`\nDisplay URL: /display/${event.id}\n`);
+  console.log(`\nDisplay URL: /display/${event.id}`);
+  console.log("Set DEMO_MODE=1 in .env.local to add a no-login \"Try the demo\" panel to the home page.\n");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

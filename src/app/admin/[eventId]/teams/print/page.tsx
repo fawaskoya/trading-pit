@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { QRCodeSVG } from "qrcode.react";
+import { teamJoinPath } from "@/lib/paths";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata = { title: "Team codes" };
@@ -24,9 +25,9 @@ export default async function PrintTeams({ params }: { params: Promise<{ eventId
           <div key={t.id} className="break-inside-avoid rounded-xl border-2 border-dashed border-neutral-300 p-4 text-center">
             <p className="text-xs uppercase tracking-widest text-neutral-500">{event?.name}</p>
             <p className="mt-1 text-lg font-bold">{t.name ?? "Your team"}</p>
-            <div className="mx-auto my-3 w-fit"><QRCodeSVG value={`${origin}/play?code=${t.join_code}`} size={120} /></div>
+            <div className="mx-auto my-3 w-fit"><QRCodeSVG value={`${origin}${teamJoinPath(t.join_code)}`} size={120} /></div>
             <p className="font-mono text-3xl font-bold tracking-[0.3em]">{t.join_code}</p>
-            <p className="mt-2 text-xs text-neutral-500">Scan, or go to {origin.replace(/^https?:\/\//, "")}/play</p>
+            <p className="mt-2 text-xs text-neutral-500">Scan to join in one tap — or type this code at {origin.replace(/^https?:\/\//, "")}</p>
           </div>
         ))}
       </div>

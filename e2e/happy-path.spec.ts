@@ -26,12 +26,20 @@ async function seed() {
   return { event: event!, companies: companies!, round: round!, teams: teams! };
 }
 
-async function joinAsTeam(browser: Browser, code: string) {
+/** `how: "link"` scans the QR / one-tap link; `"code"` types the code on the sign-in page. */
+async function joinAsTeam(browser: Browser, code: string, how: "link" | "code") {
   const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(`/play?code=${code}`);
-  await page.getByRole("button", { name: "Enter the pit" }).click();
+  if (how === "link") {
+    await page.goto(`/join/${code}`);
+  } else {
+    await page.goto("/play"); // not on a team yet → bounced to the sign-in page
+    await expect(page).toHaveURL(/\/login/);
+    await page.getByLabel("Team code").fill(code.toLowerCase());
+    await page.getByRole("button", { name: "Enter the pit" }).click();
+  }
   await expect(page.getByText("Portfolio value")).toBeVisible();
+  await expect(page).toHaveURL(/\/play$/);
   return page;
 }
 
@@ -49,7 +57,13 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   // Admin signs in and opens the control room.
   const adminCtx = await browser.newContext();
   const admin = await adminCtx.newPage();
-  await admin.goto("/admin/login");
+  // A protected page sends a signed-out organiser to the sign-in page and back again afterwards.
+  await admin.goto("/admin");
+  await expect(admin).toHaveURL(/\/login\?as=organiser/);
+  await admin.getByLabel("Password").fill("wrong-password");
+  await admin.getByLabel("Email").fill(ADMIN.email);
+  await admin.getByRole("button", { name: "Sign in" }).click();
+  await expect(admin.getByRole("alert")).toBeVisible();
   await admin.getByLabel("Email").fill(ADMIN.email);
   await admin.getByLabel("Password").fill(ADMIN.password);
   await admin.getByRole("button", { name: "Sign in" }).click();
@@ -60,8 +74,14 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   await expect(admin.getByText("Trading open")).toBeVisible();
 
   // Two teams join on "phones" and trade during the window.
-  const a = await joinAsTeam(browser, teamA.join_code);
-  const b = await joinAsTeam(browser, teamB.join_code);
+  const a = await joinAsTeam(browser, teamA.join_code, "link");
+  const b = await joinAsTeam(browser, teamB.join_code, "code");
+
+  // A code that is already in use on another phone is refused with a readable message.
+  const intruder = await (await browser.newContext()).newPage();
+  await intruder.goto(`/join/${teamA.join_code}`);
+  await expect(intruder.getByText(/Couldn't join team/)).toBeVisible();
+  await intruder.close();
   await expect(a.getByText("Trading is open")).toBeVisible();
   await buyMax(a, "Alpha Corp");
   await buyMax(b, "Beta Ltd");

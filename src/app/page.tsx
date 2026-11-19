@@ -3,7 +3,10 @@ import { ArrowRight, Gamepad2, MonitorPlay, ShieldCheck } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { findDemoEvent } from "@/lib/demo";
 import { supabaseServer } from "@/lib/supabase/server";
+import { DemoPanel } from "./demo/demo-panel";
+import { QuickJoin } from "./login/quick-join";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +14,10 @@ const TAPE = ["RELIANCE", "TCS", "HDFCBANK", "INFY", "AIRTEL", "ITC", "LT", "MAR
 
 export default async function Home() {
   const supabase = await supabaseServer();
-  const { data: live } = await supabase.from("events").select("id, name, status").eq("status", "live").order("created_at", { ascending: false }).limit(3);
+  const [{ data: live }, demo] = await Promise.all([
+    supabase.from("events").select("id, name, status").eq("status", "live").order("created_at", { ascending: false }).limit(3),
+    findDemoEvent(),
+  ]);
 
   return (
     <div className="pit-hero min-h-dvh">
@@ -36,12 +42,15 @@ export default async function Home() {
           </div>
         </div>
 
+        {demo && <DemoPanel eventId={demo.id} eventName={demo.name} />}
+
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           <Card className="group relative overflow-hidden p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
             <Gamepad2 className="mb-4 size-8 text-primary" />
             <h2 className="text-xl font-bold">I&apos;m playing</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Enter your team code and start trading from your phone.</p>
-            <Button className="mt-5 w-full" size="lg" nativeButton={false} render={<Link href="/play" />}>Join as a team <ArrowRight className="size-4" /></Button>
+            <p className="mt-1 text-sm text-muted-foreground">Type your team&apos;s 6-character code here, or scan its QR code. Works on a phone or a laptop.</p>
+            <QuickJoin />
+            <Link href="/login" className="mt-3 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">More sign-in options</Link>
           </Card>
           <Card className="p-6 transition hover:-translate-y-0.5 hover:shadow-lg">
             <MonitorPlay className="mb-4 size-8 text-primary" />
@@ -63,7 +72,7 @@ export default async function Home() {
             <ShieldCheck className="mb-4 size-8 text-primary" />
             <h2 className="text-xl font-bold">Organiser</h2>
             <p className="mt-1 text-sm text-muted-foreground">Set up companies, write headlines, run the rounds.</p>
-            <Button variant="outline" className="mt-5 w-full" size="lg" nativeButton={false} render={<Link href="/admin" />}>Admin console</Button>
+            <Button variant="outline" className="mt-5 w-full" size="lg" nativeButton={false} render={<Link href="/login?as=organiser" />}>Organiser sign in</Button>
           </Card>
         </div>
       </main>

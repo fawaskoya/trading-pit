@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
+import { organiserLoginPath } from "@/lib/paths";
 import { getSessionUser } from "@/lib/supabase/server";
 import { SignOutButton } from "../sign-out-button";
 import { AdminNav } from "./admin-nav";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function EventLayout({ children, params }: { children: React.ReactNode; params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const { supabase, user } = await getSessionUser();
-  if (!user || user.is_anonymous) redirect("/admin/login");
+  if (!user || user.is_anonymous) redirect(organiserLoginPath());
   const { data: event } = await supabase.from("events").select("id, name, status").eq("id", eventId).eq("created_by", user.id).maybeSingle();
   if (!event) notFound();
 

@@ -5,30 +5,24 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { friendlyError } from "@/lib/errors";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { joinTeam } from "@/lib/auth";
+import { FormError } from "./form-error";
 
-export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
+export function TeamForm({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
-  const [code, setCode] = useState(initialCode.toUpperCase());
+  const [code, setCode] = useState(initialCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     start(async () => {
-      const supabase = supabaseBrowser();
-      const { data: { session } } = await supabase.auth.getSession();
-      // An organiser testing on the same browser would otherwise bind the team to their admin
-      // account (and lock the code for the real team). Teams always use an anonymous session.
-      if (session && !session.user.is_anonymous) await supabase.auth.signOut();
-      if (!session || !session.user.is_anonymous) {
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) { toast.error(friendlyError(error)); return; }
-      }
-      const { error } = await supabase.rpc("claim_team", { p_join_code: code, p_team_name: name || undefined });
-      if (error) { toast.error(friendlyError(error)); return; }
+      const res = await joinTeam(code, name);
+      if (!res.ok) { setError(res.error); return; }
       toast.success("You're in! Good luck.");
+      router.replace("/play");
       router.refresh();
     });
   };
@@ -42,20 +36,23 @@ export function JoinForm({ initialCode = "" }: { initialCode?: string }) {
           inputMode="text"
           autoCapitalize="characters"
           autoComplete="off"
+          autoFocus={!initialCode}
           spellCheck={false}
           placeholder="e.g. 7KQ2XM"
           className="h-14 text-center font-mono text-2xl tracking-[0.35em] uppercase"
           value={code}
           maxLength={6}
-          onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+          aria-invalid={!!error}
+          onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "")); setError(null); }}
           required
         />
-        <p className="text-xs text-muted-foreground">Your organiser gave you a 6-character code.</p>
+        <p className="text-xs text-muted-foreground">Your organiser gave you a 6-character code. Two of you share one phone.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="name">Team name <span className="text-muted-foreground">(optional)</span></Label>
         <Input id="name" placeholder="Bull Run" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
+      <FormError message={error} />
       <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={pending || code.length !== 6}>
         {pending ? "Joining…" : "Enter the pit"}
       </Button>

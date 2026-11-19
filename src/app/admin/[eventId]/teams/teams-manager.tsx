@@ -2,13 +2,14 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Printer, RefreshCw, Trash2 } from "lucide-react";
+import { Link2, Printer, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
+import { teamJoinPath } from "@/lib/paths";
 import { createTeams, deleteTeam, resetTeamLogin, updateTeam } from "../../actions";
 
 type Team = { id: string; name: string | null; college: string | null; join_code: string; joined_at: string | null; cash: number };
@@ -33,7 +34,7 @@ export function TeamsManager({ eventId, teams, origin }: { eventId: string; team
           <Button variant="outline" size="sm" onClick={() => window.open(`/admin/${eventId}/teams/print`, "_blank")}><Printer /> Print codes & QR</Button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {teams.map((t) => <TeamCard key={t.id} t={t} joinUrl={`${origin}/play?code=${t.join_code}`} />)}
+          {teams.map((t) => <TeamCard key={t.id} t={t} joinUrl={`${origin}${teamJoinPath(t.join_code)}`} />)}
           {!teams.length && <Card className="p-8 text-center text-muted-foreground sm:col-span-2">No teams yet — create some on the right.</Card>}
         </div>
       </div>
@@ -71,7 +72,8 @@ function TeamCard({ t, joinUrl }: { t: Team; joinUrl: string }) {
         </div>
         <Input className="mt-1 h-8 border-transparent px-1 font-semibold shadow-none hover:border-border" placeholder="Team name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== (t.name ?? "") && act(() => updateTeam(t.id, { name }))} />
         <Input className="h-8 border-transparent px-1 text-sm text-muted-foreground shadow-none hover:border-border" placeholder="College" value={college} onChange={(e) => setCollege(e.target.value)} onBlur={() => college !== (t.college ?? "") && act(() => updateTeam(t.id, { college }))} />
-        <div className="mt-1 flex gap-1">
+        <div className="mt-1 flex flex-wrap gap-1">
+          <Button variant="ghost" size="xs" onClick={() => navigator.clipboard.writeText(joinUrl).then(() => toast.success("Join link copied"), () => toast.error("Couldn't copy the link"))}><Link2 /> Copy link</Button>
           <Button variant="ghost" size="xs" disabled={!t.joined_at} onClick={() => act(() => resetTeamLogin(t.id), "Login reset — they can join again from a new phone")}><RefreshCw /> Reset login</Button>
           <Button variant="ghost" size="xs" className="text-destructive" onClick={() => act(() => deleteTeam(t.id))}><Trash2 /> Remove</Button>
         </div>

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { compactRupees, integer, pct, price as fmtPrice, rupees } from "@/lib/format";
+import { suggestedMovesByTicker } from "@/lib/suggested-moves";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
@@ -194,21 +195,10 @@ function Step({ hint, children }: { hint: string; children: React.ReactNode }) {
   );
 }
 
-/** Parses "TCS -7%, INFY +3%" so the organiser can fill prices with one click. */
-function parseSuggested(text: string | null): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (!text) return out;
-  for (const part of text.replace(/^\s*suggested moves?:/i, "").split(/,|;|\n/)) {
-    const mm = part.trim().match(/^([A-Z0-9&.-]+)\s*([+-]?\d+(?:\.\d+)?)\s*%?$/i);
-    if (mm) out[mm[1].toUpperCase()] = Number(mm[2]);
-  }
-  return out;
-}
-
 function PriceEditor({ round, companies, pending, run }: { round: Round; companies: Company[]; pending: boolean; run: (label: string, fn: () => Promise<{ ok: boolean; error?: string }>) => void }) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"price" | "pct">("pct");
-  const suggested = useMemo(() => parseSuggested(round.suggested_moves), [round.suggested_moves]);
+  const suggested = useMemo(() => suggestedMovesByTicker(round.suggested_moves), [round.suggested_moves]);
 
   const newPriceOf = (c: Company): number | null => {
     const raw = inputs[c.id];

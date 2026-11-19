@@ -1,7 +1,5 @@
-import { SiteHeader } from "@/components/site-header";
-import { Card } from "@/components/ui/card";
+import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
-import { JoinForm } from "./join-form";
 import { PlayScreen } from "./play-screen";
 
 export const dynamic = "force-dynamic";
@@ -12,18 +10,8 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
   const { supabase, user } = await getSessionUser();
   const { data: team } = user ? await supabase.from("teams").select("*").eq("user_id", user.id).maybeSingle() : { data: null };
 
-  if (!team) {
-    return (
-      <div className="pit-hero min-h-dvh">
-        <SiteHeader />
-        <main className="mx-auto max-w-md px-4 py-10">
-          <h1 className="text-3xl font-extrabold">Join your team</h1>
-          <p className="mt-2 text-muted-foreground">Two of you share one login. Enter the code on one phone and you&apos;re set for the whole event.</p>
-          <Card className="mt-6 p-6"><JoinForm initialCode={code} /></Card>
-        </main>
-      </div>
-    );
-  }
+  // Not on a team yet: the one sign-in page handles it (keeping a code from an old /play?code= link).
+  if (!team) redirect(code ? `/login?code=${encodeURIComponent(code)}` : "/login");
 
   const [{ data: event }, { data: companies }, { data: rounds }, { data: holdings }, { data: me }, { data: orders }, { data: leaders }, { data: priceUpdates }, { data: snapshots }] = await Promise.all([
     supabase.from("events").select("*").eq("id", team.event_id).single(),

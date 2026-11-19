@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Lock, LogOut, Newspaper, Trophy } from "lucide-react";
+import { ChevronRight, Lock, Newspaper, Trophy } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Countdown } from "@/components/countdown";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
@@ -13,6 +12,8 @@ import { compactRupees, integer, pct, price as fmtPrice, rupees, signed } from "
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
+import { LeaveTeamButton } from "./leave-team-button";
+import { NameTeamPrompt } from "./name-team-prompt";
 import { TradeDrawer } from "./trade-drawer";
 import { HistoryTab } from "./history-tab";
 
@@ -66,17 +67,21 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   return (
     <div className="min-h-dvh pb-24">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4 lg:max-w-6xl">
           <Logo href="/play" />
           <div className="flex items-center gap-1">
-            <span className="mr-1 max-w-[9rem] truncate text-sm font-semibold">{team.name ?? `Team ${team.join_code}`}</span>
+            <span className="mr-1 max-w-[9rem] truncate text-sm font-semibold lg:max-w-xs">{team.name ?? `Team ${team.join_code}`}</span>
             <ThemeToggle />
-            <Button variant="ghost" size="icon" aria-label="Sign out" onClick={async () => { await supabaseBrowser().auth.signOut(); router.refresh(); }}><LogOut className="size-4" /></Button>
+            <LeaveTeamButton teamName={team.name ?? `Team ${team.join_code}`} />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg space-y-4 px-4 pt-4">
+      {/* Phone: one column. Laptop: portfolio + headline stay pinned on the left, market on the right. */}
+      <main className="mx-auto max-w-lg px-4 pt-4 lg:grid lg:max-w-6xl lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6 lg:pt-6">
+        <div className="space-y-4 lg:sticky lg:top-20">
+        {!team.name && <NameTeamPrompt teamId={team.id} />}
+
         {/* Portfolio hero */}
         <Card className="pit-hero overflow-hidden p-5">
           <div className="flex items-start justify-between">
@@ -132,8 +137,11 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
           <StateBanner state={active?.state ?? null} open={tradingOpen} finished={finished} secondsLeft={secondsLeft} />
         </Card>
 
+        </div>
+
+        <div className="mt-4 space-y-4 lg:mt-0">
         {/* Tabs */}
-        <div className="grid grid-cols-3 rounded-lg bg-muted p-1 text-sm font-medium">
+        <div className="grid grid-cols-3 rounded-lg bg-muted p-1 text-sm font-medium lg:max-w-sm">
           {([["market", "Market"], ["history", "History"], ["ranks", "Ranks"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)} className={cn("rounded-md py-2 transition", tab === k ? "bg-background shadow-sm" : "text-muted-foreground")}>{label}</button>
           ))}
@@ -141,12 +149,15 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
 
         {tab === "market" && (
           <div className="space-y-2">
-            <p className="px-1 text-xs text-muted-foreground">{tradingOpen ? "Tap a company to buy or sell." : "Tap a company to see details. Trading opens with the window."}</p>
-            {companies.map((c) => <CompanyRow key={c.id} c={c} shares={held[c.id] ?? 0} onClick={() => setSelected(c)} />)}
+            <p className="px-1 text-xs text-muted-foreground">{tradingOpen ? "Select a company to buy or sell." : "Select a company to see details. Trading opens with the window."}</p>
+            <div className="grid gap-2 xl:grid-cols-2">
+              {companies.map((c) => <CompanyRow key={c.id} c={c} shares={held[c.id] ?? 0} onClick={() => setSelected(c)} />)}
+            </div>
           </div>
         )}
         {tab === "history" && <HistoryTab event={event} rounds={rounds} companies={companies} orders={orders} priceUpdates={priceUpdates} snapshots={snapshots} currentTotal={total} />}
         {tab === "ranks" && <Ranks leaders={leaders} myId={team.id} />}
+        </div>
       </main>
 
       <TradeDrawer
@@ -188,7 +199,7 @@ function CompanyRow({ c, shares, onClick }: { c: Company; shares: number; onClic
     if (now !== prev.current) { setFlash(now > prev.current ? "flash-gain" : "flash-loss"); prev.current = now; const t = setTimeout(() => setFlash(""), 1300); return () => clearTimeout(t); }
   }, [c.current_price]);
   return (
-    <button onClick={onClick} className={cn("flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition active:scale-[0.99]", flash)}>
+    <button onClick={onClick} className={cn("flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left ring-1 ring-foreground/10 transition hover:ring-primary/50 active:scale-[0.99]", flash)}>
       <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted font-mono text-xs font-bold">{c.ticker.slice(0, 4)}</div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{c.name}</p>

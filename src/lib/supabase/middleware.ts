@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { organiserLoginPath } from "@/lib/paths";
 
 /** Refreshes the auth session on every request and mirrors the cookies to the response. */
 export async function updateSession(request: NextRequest) {
@@ -27,10 +28,7 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAdminArea = path.startsWith("/admin") && !path.startsWith("/admin/login");
   if (isAdminArea && (!user || user.is_anonymous)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin/login";
-    url.searchParams.set("next", path);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL(organiserLoginPath(path + request.nextUrl.search), request.url));
   }
   return response;
 }

@@ -10,7 +10,7 @@
 
 ## On the day
 
-Teams scan their QR (or type the 6-letter code at `/play`) and pick a team name. The Teams tab shows who has joined. If a phone dies, click **Reset login** on that team and they rejoin on another phone with the same code.
+Teams scan their QR — that alone logs them in — or type the 6-letter code on the **Team** tab at `/login`. Blank teams are asked for a team name on their first screen. The Teams tab shows who has joined. If a phone dies, click **Reset login** on that team and they rejoin on another phone with the same code.
 
 Everything happens in the **Control room** tab. Each round is four buttons, in order:
 
