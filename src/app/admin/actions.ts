@@ -5,7 +5,7 @@ import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { friendlyError } from "@/lib/errors";
-import { companySchema, eventSchema, headlineSchema, parseCompanyPaste, pricesSchema, teamsCreateSchema } from "@/lib/schemas";
+import { actOfGodSchema, companySchema, eventSchema, headlineSchema, parseCompanyPaste, pricesSchema, teamsCreateSchema } from "@/lib/schemas";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
@@ -123,7 +123,15 @@ export async function saveHeadline(input: unknown): Promise<ActionResult> {
     const d = headlineSchema.parse(input);
     const { data, error } = await supabase.from("rounds").update({ headline: d.headline || null, headline_detail: d.headline_detail || null }).eq("id", d.round_id).select("event_id").single();
     if (error) throw error;
-    const { error: nErr } = await supabase.from("round_notes").upsert({ round_id: d.round_id, suggested_moves: d.suggested_moves || null, updated_at: new Date().toISOString() });
+    const { error: nErr } = await supabase.from("round_notes").upsert({
+      round_id: d.round_id,
+      suggested_moves: d.suggested_moves || null,
+      ...(d.shock_headline !== undefined && { shock_headline: d.shock_headline || null }),
+      ...(d.shock_detail !== undefined && { shock_detail: d.shock_detail || null }),
+      ...(d.shock_moves !== undefined && { shock_moves: d.shock_moves || null }),
+      ...(d.shock_extend_sec !== undefined && { shock_extend_sec: d.shock_extend_sec }),
+      updated_at: new Date().toISOString(),
+    });
     if (nErr) throw nErr;
     revalidatePath(`/admin/${data.event_id}`, "layout");
     return { ok: true };
@@ -193,6 +201,21 @@ export async function releaseHeadline(roundId: string) { return roundRpc("releas
 export async function openWindow(roundId: string) { return roundRpc("open_window", roundId); }
 export async function closeWindow(roundId: string) { return roundRpc("close_window", roundId); }
 export async function undoPrices(roundId: string) { return roundRpc("undo_last_price_application", roundId); }
+
+/** Act of God: breaking news mid-window that moves prices at once and adds time. One per round. */
+export async function fireActOfGod(roundId: string, input: unknown, pricesInput: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAdmin();
+    const d = actOfGodSchema.parse(input);
+    const prices = pricesSchema.parse(pricesInput);
+    const { data, error } = await supabase.rpc("fire_act_of_god", {
+      p_round_id: roundId, p_headline: d.headline, p_detail: d.detail ?? "", p_extend_sec: d.extend_sec, p_prices: prices,
+    });
+    if (error) throw error;
+    revalidatePath(`/admin/${data.event_id}`, "layout");
+    return { ok: true };
+  } catch (e) { return fail(e); }
+}
 
 export async function applyPrices(roundId: string, input: unknown): Promise<ActionResult> {
   try {

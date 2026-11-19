@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
@@ -7,13 +7,14 @@ import { compactRupees, pct, price as fmtPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Event = { id: string; name: string; status: string; total_rounds: number; starting_capital: number };
-type Round = { id: string; round_no: number; headline: string | null; headline_detail: string | null; state: string; window_closes_at: string | null };
+type Round = {
+  id: string; round_no: number; headline: string | null; headline_detail: string | null; state: string; window_closes_at: string | null;
+  shock_headline: string | null; shock_detail: string | null; shock_extend_sec: number | null; shock_at: string | null;
+};
 type Company = { id: string; name: string; ticker: string; sector: string | null; current_price: number; last_change_pct: number };
 type Leader = { team_id: string | null; name: string | null; college: string | null; total_value: number | null; rank: number | null; change_this_round: number | null; change_this_round_pct: number | null; pnl: number | null };
 type Point = { team_id: string | null; round_no: number | null; total_value: number | null };
 type View = "leaderboard" | "headline" | "prices";
-
-const ROTATE_MS = 12000;
 
 export function DisplayBoard({ host, event, rounds, companies, leaders, curve, pinned }: { host: string; event: Event; rounds: Round[]; companies: Company[]; leaders: Leader[]; curve: Point[]; pinned: View | null }) {
   // The projector is anonymous, so it can't subscribe to team/holdings changes — the hook's poll covers those.
@@ -28,10 +29,9 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
   const windowOpen = active?.state === "window_open";
   const secondsLeft = useCountdown(windowOpen ? active?.window_closes_at : null);
 
-  // Rotation: pinned view wins; when a window is open, alternate headline ↔ leaderboard; otherwise cycle all three.
-  const [tick, setTick] = useState(0);
-  useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), ROTATE_MS); return () => clearInterval(id); }, []);
-  const view: View = pinned ?? (finished ? "leaderboard" : windowOpen ? (["headline", "leaderboard"] as View[])[tick % 2] : (["leaderboard", "headline", "prices"] as View[])[tick % 3]);
+  // No auto-rotation: the organiser scrolls (wheel, Page Down or a presenter clicker). `?view=` pins one section.
+  const shocked = !!active?.shock_at && (active.state === "window_open" || active.state === "window_closed");
+  const sections: View[] = pinned ? [pinned] : finished ? ["leaderboard", "prices"] : ["headline", "leaderboard", "prices"];
 
   const spark = useMemo(() => {
     const byTeam: Record<string, number[]> = {};
@@ -41,8 +41,8 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
 
   return (
     <div className="dark min-h-dvh bg-[oklch(0.13_0.02_265)] text-[oklch(0.96_0.01_85)] [font-feature-settings:'tnum']">
-      <div className="pit-hero flex min-h-dvh flex-col px-10 py-8">
-        <header className="flex items-center justify-between">
+      <div className="pit-hero flex min-h-dvh flex-col px-10 pb-8">
+        <header className="sticky top-0 z-20 -mx-10 flex items-center justify-between bg-[oklch(0.13_0.02_265)]/90 px-10 py-6 backdrop-blur">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[oklch(0.8_0.15_75)]">Trading Pit · Live</p>
             <h1 className="font-heading text-4xl font-extrabold">{event.name}</h1>
@@ -63,20 +63,37 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
           </div>
         </header>
 
-        <main className="mt-8 flex-1">
-          {view === "leaderboard" && <Leaderboard leaders={leaders} spark={spark} finished={finished} lastRound={lastApplied?.round_no ?? null} />}
-          {view === "headline" && <Headline active={active} windowOpen={windowOpen} secondsLeft={secondsLeft} />}
-          {view === "prices" && <Prices companies={companies} />}
+        {shocked && !finished && (
+          <div className="sticky top-[7.5rem] z-10 mt-2 flex items-center gap-6 rounded-2xl bg-[oklch(0.62_0.22_25)] px-8 py-5 text-white shadow-2xl">
+            <span className="shrink-0 animate-pulse font-heading text-3xl font-extrabold uppercase tracking-[0.2em]">⚡ Breaking</span>
+            <div className="min-w-0">
+              <p className="font-heading text-4xl font-extrabold leading-tight">{active!.shock_headline}</p>
+              {active!.shock_detail && <p className="mt-1 text-2xl text-white/85">{active!.shock_detail}</p>}
+            </div>
+            {windowOpen && !!active!.shock_extend_sec && <span className="ml-auto shrink-0 text-2xl font-bold">+{active!.shock_extend_sec}s</span>}
+          </div>
+        )}
+
+        <main className="mt-6 flex-1 space-y-16">
+          {sections.map((v) => (
+            <section key={v} id={v} className="scroll-mt-40">
+              {sections.length > 1 && <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-white/40">{SECTION_LABEL[v]}</p>}
+              {v === "leaderboard" && <Leaderboard leaders={leaders} spark={spark} finished={finished} lastRound={lastApplied?.round_no ?? null} />}
+              {v === "headline" && <Headline active={active} windowOpen={windowOpen} secondsLeft={secondsLeft} />}
+              {v === "prices" && <Prices companies={companies} />}
+            </section>
+          ))}
         </main>
 
-        <footer className="mt-6 flex items-center justify-between text-sm text-white/40">
+        <footer className="mt-10 text-sm text-white/40">
           <span>Join at <span className="font-mono text-white/70">{host}/play</span></span>
-          <span className="flex gap-2">{(["leaderboard", "headline", "prices"] as View[]).map((v) => <span key={v} className={cn("size-2 rounded-full", v === view ? "bg-[oklch(0.8_0.15_75)]" : "bg-white/20")} />)}</span>
         </footer>
       </div>
     </div>
   );
 }
+
+const SECTION_LABEL: Record<View, string> = { headline: "Headline", leaderboard: "Leaderboard", prices: "Market prices" };
 
 function stateLabel(state: string | undefined) {
   switch (state) {
@@ -135,7 +152,7 @@ function Headline({ active, windowOpen, secondsLeft }: { active: Round | null; w
   }
   return (
     <Center>
-      <p className="mb-6 text-2xl uppercase tracking-[0.3em] text-[oklch(0.8_0.15_75)]">Breaking · Round {active.round_no}</p>
+      <p className="mb-6 text-2xl uppercase tracking-[0.3em] text-[oklch(0.8_0.15_75)]">Headline · Round {active.round_no}</p>
       <h2 className="max-w-5xl font-heading text-7xl font-extrabold leading-[1.05]">{active.headline ?? "No headline this round — trade on instinct."}</h2>
       {active.headline_detail && <p className="mt-6 max-w-4xl text-3xl leading-snug text-white/70">{active.headline_detail}</p>}
       {windowOpen && (
@@ -151,6 +168,13 @@ function Headline({ active, windowOpen, secondsLeft }: { active: Round | null; w
 }
 
 function Prices({ companies }: { companies: Company[] }) {
+  // The database hides the scrips from the projector until round 1's trading window opens.
+  if (!companies.length) return (
+    <Center>
+      <p className="text-4xl font-bold">The market opens in round 1</p>
+      <p className="mt-3 text-xl text-white/50">The companies are revealed when trading starts.</p>
+    </Center>
+  );
   return (
     <div className="grid grid-cols-4 gap-3">
       {companies.map((c) => {

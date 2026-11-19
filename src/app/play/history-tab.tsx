@@ -6,8 +6,8 @@ import { compactRupees, integer, pct, price as fmtPrice, rupees } from "@/lib/fo
 import { cn } from "@/lib/utils";
 import type { Company, Event, Order, PriceUpdate, Round, Snapshot } from "./play-screen";
 
-export function HistoryTab({ event, rounds, companies, orders, priceUpdates, snapshots, currentTotal }: {
-  event: Event; rounds: Round[]; companies: Company[]; orders: Order[]; priceUpdates: PriceUpdate[]; snapshots: Snapshot[]; currentTotal: number;
+export function HistoryTab({ event, rounds, companies, orders, priceUpdates, shockMoves, snapshots, currentTotal }: {
+  event: Event; rounds: Round[]; companies: Company[]; orders: Order[]; priceUpdates: PriceUpdate[]; shockMoves: PriceUpdate[]; snapshots: Snapshot[]; currentTotal: number;
 }) {
   const byId = useMemo(() => Object.fromEntries(companies.map((c) => [c.id, c])), [companies]);
   const done = rounds.filter((r) => r.state === "prices_applied");
@@ -44,7 +44,9 @@ export function HistoryTab({ event, rounds, companies, orders, priceUpdates, sna
       </Card>
 
       {[...done].reverse().map((r) => {
-        const moves = priceUpdates.filter((p) => p.round_id === r.id).map((p) => ({ ...p, c: byId[p.company_id], chg: ((Number(p.new_price) - Number(p.old_price)) / Number(p.old_price)) * 100 })).filter((m) => m.c).sort((a, b) => Math.abs(b.chg) - Math.abs(a.chg));
+        const toMoves = (list: PriceUpdate[]) => list.filter((p) => p.round_id === r.id).map((p) => ({ ...p, c: byId[p.company_id], chg: ((Number(p.new_price) - Number(p.old_price)) / Number(p.old_price)) * 100 })).filter((m) => m.c).sort((a, b) => Math.abs(b.chg) - Math.abs(a.chg));
+        const moves = toMoves(priceUpdates);
+        const breaking = toMoves(shockMoves);
         const mine = orders.filter((o) => o.round_id === r.id);
         const snap = snapByRound[r.id];
         const prevSnap = done.filter((d) => d.round_no < r.round_no).map((d) => snapByRound[d.id]).filter(Boolean).pop();
@@ -63,9 +65,22 @@ export function HistoryTab({ event, rounds, companies, orders, priceUpdates, sna
                 </div>
               )}
             </div>
+            {r.shock_headline && (
+              <div className="mt-3 rounded-lg bg-loss-soft p-2.5">
+                <p className="text-xs font-bold uppercase tracking-widest text-loss">⚡ Breaking mid-round</p>
+                <p className="text-sm font-semibold">{r.shock_headline}</p>
+                {breaking.length > 0 && (
+                  <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                    {breaking.map((m) => (
+                      <li key={m.company_id} className="flex justify-between"><span className="font-mono">{m.c.ticker}</span><span className={cn("num font-mono", m.chg > 0 ? "text-gain" : "text-loss")}>{pct(m.chg, 1)}</span></li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {moves.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs text-muted-foreground">Price moves</p>
+                <p className="text-xs text-muted-foreground">{r.shock_headline ? "End-of-round price moves" : "Price moves"}</p>
                 <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
                   {moves.map((m) => (
                     <li key={m.company_id} className="flex justify-between"><span className="font-mono">{m.c.ticker}</span><span className={cn("num font-mono", m.chg > 0 ? "text-gain" : "text-loss")}>{pct(m.chg, 1)}</span></li>

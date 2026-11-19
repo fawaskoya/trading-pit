@@ -40,13 +40,14 @@ export function TeamsManager({ eventId, teams, origin }: { eventId: string; team
       </div>
       <Card className="h-fit space-y-5 p-5">
         <div>
-          <h3 className="font-semibold">Add teams by name</h3>
-          <Textarea className="mt-2 min-h-28 text-sm" placeholder={"Bull Run\nNifty Ninjas\nSensex Sharks"} value={names} onChange={(e) => setNames(e.target.value)} />
-          <Button className="mt-2 w-full" disabled={pending || !names.trim()} onClick={() => add("names")}>Create named teams</Button>
+          <h3 className="font-semibold">Add teams by chest number</h3>
+          <p className="text-xs text-muted-foreground">One per line. This is the company name teams trade under — they can&apos;t change it.</p>
+          <Textarea className="mt-2 min-h-28 text-sm" placeholder={"101\n102\n103"} value={names} onChange={(e) => setNames(e.target.value)} />
+          <Button className="mt-2 w-full" disabled={pending || !names.trim()} onClick={() => add("names")}>Create teams</Button>
         </div>
         <div className="border-t pt-5">
           <h3 className="font-semibold">Or generate blank teams</h3>
-          <p className="text-xs text-muted-foreground">Teams pick their own name when they join.</p>
+          <p className="text-xs text-muted-foreground">They show as “Team &lt;code&gt;” until you name them here.</p>
           <div className="mt-2 flex gap-2">
             <Input type="number" min={1} max={200} value={count} onChange={(e) => setCount(Number(e.target.value))} className="w-24" />
             <Button className="flex-1" variant="secondary" disabled={pending} onClick={() => add("count")}>Generate {count}</Button>
@@ -70,7 +71,7 @@ function TeamCard({ t, joinUrl }: { t: Team; joinUrl: string }) {
           <span className="font-mono text-xl font-bold tracking-widest">{t.join_code}</span>
           <Badge variant={t.joined_at ? "default" : "secondary"}>{t.joined_at ? "Joined" : "Not yet"}</Badge>
         </div>
-        <Input className="mt-1 h-8 border-transparent px-1 font-semibold shadow-none hover:border-border" placeholder="Team name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== (t.name ?? "") && act(() => updateTeam(t.id, { name }))} />
+        <Input className="mt-1 h-8 border-transparent px-1 font-semibold shadow-none hover:border-border" placeholder="Chest number" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name !== (t.name ?? "") && act(() => updateTeam(t.id, { name }))} />
         <Input className="h-8 border-transparent px-1 text-sm text-muted-foreground shadow-none hover:border-border" placeholder="College" value={college} onChange={(e) => setCollege(e.target.value)} onBlur={() => college !== (t.college ?? "") && act(() => updateTeam(t.id, { college }))} />
         <div className="mt-1 flex flex-wrap gap-1">
           <Button variant="ghost" size="xs" onClick={() => navigator.clipboard.writeText(joinUrl).then(() => toast.success("Join link copied"), () => toast.error("Couldn't copy the link"))}><Link2 /> Copy link</Button>

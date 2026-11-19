@@ -37,7 +37,7 @@ end $$;
 
 -- ---------------------------------------------------------------- join
 select pg_temp.login('00000000-0000-0000-0000-000000000001');
-select is((select name from public.claim_team('aaa-aaa', 'Alpha Wolves')), 'Alpha Wolves', 'claim_team normalises the code and sets the name');
+select is((select name from public.claim_team('aaa-aaa', 'Alpha Wolves')), 'Alpha', 'claim_team normalises the code and keeps the organiser''s team name');
 select throws_like($$select public.claim_team('ZZZZZZ')$$, 'BAD_CODE', 'unknown code is rejected');
 select pg_temp.logout();
 

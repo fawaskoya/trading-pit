@@ -14,7 +14,7 @@ const fail = (e: unknown): AuthResult => ({
  * Join a team with its code. Teams always use an anonymous session: an organiser testing on the
  * same browser would otherwise bind the team to their admin account and lock the code.
  */
-export async function joinTeam(joinCode: string, teamName?: string): Promise<AuthResult> {
+export async function joinTeam(joinCode: string): Promise<AuthResult> {
   try {
     const supabase = supabaseBrowser();
     const { data: { session } } = await supabase.auth.getSession();
@@ -23,7 +23,7 @@ export async function joinTeam(joinCode: string, teamName?: string): Promise<Aut
       const { error } = await supabase.auth.signInAnonymously();
       if (error) return fail(error);
     }
-    const { error } = await supabase.rpc("claim_team", { p_join_code: joinCode, p_team_name: teamName?.trim() || undefined });
+    const { error } = await supabase.rpc("claim_team", { p_join_code: joinCode });
     return error ? fail(error) : { ok: true };
   } catch (e) {
     return fail(e);

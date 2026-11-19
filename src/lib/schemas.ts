@@ -24,6 +24,17 @@ export const headlineSchema = z.object({
   headline: z.string().trim().max(200).nullable(),
   headline_detail: z.string().trim().max(2000).nullable(),
   suggested_moves: z.string().trim().max(500).nullable().optional(),
+  // Optional Act of God draft for this round (organiser-only until fired).
+  shock_headline: z.string().trim().max(200).nullable().optional(),
+  shock_detail: z.string().trim().max(2000).nullable().optional(),
+  shock_moves: z.string().trim().max(500).nullable().optional(),
+  shock_extend_sec: z.number().int().min(0).max(600).optional(),
+});
+
+export const actOfGodSchema = z.object({
+  headline: z.string().trim().min(1, "Give the Act of God a headline.").max(200),
+  detail: z.string().trim().max(2000).nullable(),
+  extend_sec: z.number().int().min(0).max(600),
 });
 
 export const pricesSchema = z.array(z.object({

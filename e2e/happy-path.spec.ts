@@ -1,6 +1,7 @@
 /**
- * Full happy path: admin opens the window, two teams trade, window closes, prices applied,
- * leaderboard order is correct on the projector and in the database.
+ * Full happy path: a team waits on its portfolio-only screen, admin opens the window, two teams trade,
+ * the admin watches the order flow and fires an Act of God, the window closes, prices are applied, and
+ * the leaderboard order is correct on the projector and in the database.
  * Requires `supabase start` and .env.local (service role key) — see README.
  */
 import { test, expect, type Browser, type Page } from "@playwright/test";
@@ -69,12 +70,26 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   await admin.getByRole("button", { name: "Sign in" }).click();
   await expect(admin.getByText("Your events")).toBeVisible();
   await admin.goto(`/admin/${event.id}`);
+
+  // Team A joins before the round starts: a big portfolio card under the organiser's name, and nothing else —
+  // no round card, no market, not even a sign-out button.
+  const a = await joinAsTeam(browser, teamA.join_code, "link");
+  await expect(a.getByText("Your company")).toBeVisible();
+  await expect(a.getByText("Team Alpha").first()).toBeVisible();
+  await expect(a.getByRole("button")).toHaveCount(0);
+  await expect(a.getByText("Alpha Corp")).toHaveCount(0);
+
+  // The headline alone doesn't reveal the scrips…
   await admin.getByRole("button", { name: /Release headline/ }).click();
+  await expect(a.getByText(/companies you can trade appear when the organiser opens trading/)).toBeVisible();
+  await expect(a.getByText("Alpha Corp")).toHaveCount(0);
+
+  // …opening the window does.
   await admin.getByRole("button", { name: /Open trading window/ }).click();
   await expect(admin.getByText("Trading open")).toBeVisible();
+  await expect(a.getByRole("button", { name: /Alpha Corp/ })).toBeVisible();
 
-  // Two teams join on "phones" and trade during the window.
-  const a = await joinAsTeam(browser, teamA.join_code, "link");
+  // Team B joins mid-window by typing its code.
   const b = await joinAsTeam(browser, teamB.join_code, "code");
 
   // A code that is already in use on another phone is refused with a readable message.
@@ -85,6 +100,27 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   await expect(a.getByText("Trading is open")).toBeVisible();
   await buyMax(a, "Alpha Corp");
   await buyMax(b, "Beta Ltd");
+
+  // The organiser watches the order flow as it happens.
+  await expect(admin.getByText("Order flow this round")).toBeVisible();
+  await expect(admin.getByText("2 orders")).toBeVisible();
+
+  // Act of God mid-window: Beta crashes 10% at once and the window gets 30 more seconds.
+  const beta = companies.find((c) => c.ticker === "BETA")!;
+  const { data: before } = await service.from("rounds").select("window_closes_at").eq("id", round.id).single();
+  await admin.getByRole("button", { name: /Act of God.*Show/ }).click();
+  await admin.getByLabel("Act of God headline").fill("Beta's warehouse burns down");
+  await admin.getByLabel("Extra seconds").fill("30");
+  await admin.getByRole("row", { name: /BETA/ }).getByRole("textbox").fill("-10");
+  await admin.getByRole("button", { name: /Fire Act of God/ }).click();
+  await admin.getByRole("button", { name: /Click again to fire now/ }).click();
+  await expect(admin.getByText("Act of God fired · +30s")).toBeVisible();
+  await expect(b.getByText("Beta's warehouse burns down").first()).toBeVisible();
+  await expect(b.getByText(/\+30s added to the clock/)).toBeVisible();
+  const { data: shocked } = await service.from("rounds").select("window_closes_at").eq("id", round.id).single();
+  expect(new Date(shocked!.window_closes_at!).getTime() - new Date(before!.window_closes_at!).getTime()).toBe(30_000);
+  const { data: betaNow } = await service.from("companies").select("current_price").eq("id", beta.id).single();
+  expect(Number(betaNow!.current_price)).toBe(45);
 
   // Trading after close is rejected server-side.
   await admin.getByRole("button", { name: /Close window now/ }).click();

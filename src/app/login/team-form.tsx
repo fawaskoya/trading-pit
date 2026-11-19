@@ -11,7 +11,6 @@ import { FormError } from "./form-error";
 export function TeamForm({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
   const [code, setCode] = useState(initialCode.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
-  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -19,7 +18,7 @@ export function TeamForm({ initialCode = "" }: { initialCode?: string }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await joinTeam(code, name);
+      const res = await joinTeam(code);
       if (!res.ok) { setError(res.error); return; }
       toast.success("You're in! Good luck.");
       router.replace("/play");
@@ -47,10 +46,6 @@ export function TeamForm({ initialCode = "" }: { initialCode?: string }) {
           required
         />
         <p className="text-xs text-muted-foreground">Your organiser gave you a 6-character code. Two of you share one phone.</p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="name">Team name <span className="text-muted-foreground">(optional)</span></Label>
-        <Input id="name" placeholder="Bull Run" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <FormError message={error} />
       <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={pending || code.length !== 6}>

@@ -30,7 +30,7 @@ pnpm seed                      # demo event: 20 Indian large caps, 6 headlines, 
 pnpm dev                       # http://localhost:3000
 ```
 
-`pnpm seed` prints the admin login (`admin@tradingpit.local` / `tradingpit`), six team join codes and the projector URL.
+`pnpm seed` prints the admin login (`admin@tradingpit.local` / `tradingpit`), ten team join codes (chest numbers SPC-01 to SPC-10) and the projector URL. The demo event has 10 rounds of trap headlines, with an Act of God drafted for rounds 4, 7 and 9.
 
 **Demo mode (local only).** With `DEMO_MODE=1` in `.env.local` and the seed in place, the home page gains a *Try the demo* panel: **Play as a guest team** (creates a fresh team and joins it), **Run it as organiser** (signs in as the seeded admin and opens the control room) and **Open the projector** — no credentials to hand out. It is off unless that variable is set, and it needs the service-role key, which is never configured on Vercel. One browser profile holds one session, so play the guest team in a private window or on a phone while the organiser console is open.
 
@@ -39,7 +39,7 @@ Useful scripts:
 | Script | What it does |
 |---|---|
 | `pnpm db:reset` | Recreate the local database from `supabase/migrations`, then seed |
-| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (44 tests) |
+| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (67 tests) |
 | `pnpm db:types` | Regenerate `src/lib/database.types.ts` after changing the schema |
 | `pnpm test:e2e` | Playwright happy path (builds and starts a production server; needs `supabase start`) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm build` | Quality gates |
@@ -55,7 +55,7 @@ Useful scripts:
 - `apply_round_prices(round, [{company_id, new_price}])` — updates only the listed companies, records `price_updates`, snapshots every team's portfolio, advances the round, and marks the event finished after the last round.
 - `close_expired_windows()` — idempotent fallback run by `pg_cron` every minute and by any client whose countdown hits zero. Even if it lags, `execute_order` rejects late orders by time.
 
-**Security model (RLS):** teams see public event/company/round/price data plus their own team, holdings, orders and snapshots; only the event's creator can write. The projector reads `leaderboard_view` and `equity_curve_view`, which expose team name, value, rank and round change — never cash or holdings. Unreleased headlines are invisible to teams, and the organiser's private "suggested moves" live in `round_notes`, which teams cannot read at all.
+**Security model (RLS):** teams see public event/round/price data plus their own team, holdings, orders and snapshots; only the event's creator can write (including team names). Companies are hidden from teams and the projector until the event's first trading window opens (`market_opened()`). The projector reads `leaderboard_view` and `equity_curve_view`, which expose team name, value, rank and round change — never cash or holdings. Unreleased headlines are invisible to teams, and the organiser's private "suggested moves" live in `round_notes`, which teams cannot read at all.
 
 **Sessions:** cookie-based via `@supabase/ssr`. Teams sign in anonymously and claim a join code, so a refresh, a closed tab or a phone reboot keeps them logged in. If a team loses their session, the organiser clicks *Reset login* and they rejoin with the same code.
 

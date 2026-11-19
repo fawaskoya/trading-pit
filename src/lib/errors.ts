@@ -16,6 +16,9 @@ const FRIENDLY: Record<string, string> = {
   CAPITAL_LOCKED: "Starting capital is locked once any team has traded.",
   ROUNDS_IN_USE: "You can't remove rounds that have already started.",
   NOT_AUTHENTICATED: "Please reload the page and try again.",
+  SHOCK_USED: "This round has already had its Act of God.",
+  INVALID_SHOCK: "Check the Act of God headline and extra time.",
+  INVALID_PRICES: "Every new price must be greater than zero.",
 };
 
 export function friendlyError(err: unknown): string {

@@ -325,16 +325,28 @@ export type Database = {
       round_notes: {
         Row: {
           round_id: string
+          shock_detail: string | null
+          shock_extend_sec: number
+          shock_headline: string | null
+          shock_moves: string | null
           suggested_moves: string | null
           updated_at: string
         }
         Insert: {
           round_id: string
+          shock_detail?: string | null
+          shock_extend_sec?: number
+          shock_headline?: string | null
+          shock_moves?: string | null
           suggested_moves?: string | null
           updated_at?: string
         }
         Update: {
           round_id?: string
+          shock_detail?: string | null
+          shock_extend_sec?: number
+          shock_headline?: string | null
+          shock_moves?: string | null
           suggested_moves?: string | null
           updated_at?: string
         }
@@ -356,6 +368,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -367,6 +383,10 @@ export type Database = {
           headline_detail?: string | null
           id?: string
           round_no: number
+          shock_at?: string | null
+          shock_detail?: string | null
+          shock_extend_sec?: number | null
+          shock_headline?: string | null
           state?: Database["public"]["Enums"]["round_state"]
           window_closes_at?: string | null
           window_opens_at?: string | null
@@ -378,6 +398,10 @@ export type Database = {
           headline_detail?: string | null
           id?: string
           round_no?: number
+          shock_at?: string | null
+          shock_detail?: string | null
+          shock_extend_sec?: number | null
+          shock_headline?: string | null
           state?: Database["public"]["Enums"]["round_state"]
           window_closes_at?: string | null
           window_opens_at?: string | null
@@ -388,6 +412,48 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shock_price_changes: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: number
+          new_price: number
+          old_price: number
+          round_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: number
+          new_price: number
+          old_price: number
+          round_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: number
+          new_price?: number
+          old_price?: number
+          round_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shock_price_changes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shock_price_changes_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
             referencedColumns: ["id"]
           },
         ]
@@ -507,6 +573,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -527,6 +597,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -569,6 +643,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -605,7 +683,38 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fire_act_of_god: {
+        Args: {
+          p_detail: string
+          p_extend_sec: number
+          p_headline: string
+          p_prices: Json
+          p_round_id: string
+        }
+        Returns: {
+          applied_at: string | null
+          event_id: string
+          headline: string | null
+          headline_detail: string | null
+          id: string
+          round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
+          state: Database["public"]["Enums"]["round_state"]
+          window_closes_at: string | null
+          window_opens_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rounds"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_event_admin: { Args: { p_event_id: string }; Returns: boolean }
+      market_opened: { Args: { p_event_id: string }; Returns: boolean }
       my_team_id: { Args: never; Returns: string }
       open_window: {
         Args: { p_round_id: string }
@@ -616,6 +725,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -636,6 +749,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
@@ -679,6 +796,10 @@ export type Database = {
           headline_detail: string | null
           id: string
           round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
           state: Database["public"]["Enums"]["round_state"]
           window_closes_at: string | null
           window_opens_at: string | null
