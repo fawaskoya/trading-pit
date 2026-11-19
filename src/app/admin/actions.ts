@@ -227,3 +227,29 @@ export async function applyPrices(roundId: string, input: unknown): Promise<Acti
     return { ok: true };
   } catch (e) { return fail(e); }
 }
+
+// ------------------------------------------------------------------ judging
+const adjustmentSchema = z.object({
+  event_id: z.string().uuid(),
+  team_id: z.string().uuid(),
+  section: z.enum(["A", "B", "C", "D"]),
+  delta: z.number().min(-2).max(2).multipleOf(0.5),
+  note: z.string().trim().max(500).nullable(),
+});
+
+/** A judge's adjustment to one section of a team's automatic score (±2, in half points). */
+export async function saveAdjustment(input: unknown): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireAdmin();
+    const d = adjustmentSchema.parse(input);
+    if (d.delta === 0 && !d.note) {
+      const { error } = await supabase.from("score_adjustments").delete().eq("team_id", d.team_id).eq("section", d.section);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("score_adjustments").upsert({ ...d, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    }
+    revalidatePath(`/admin/${d.event_id}/scores`, "layout");
+    return { ok: true };
+  } catch (e) { return fail(e); }
+}

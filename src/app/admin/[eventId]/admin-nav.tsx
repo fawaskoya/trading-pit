@@ -8,6 +8,7 @@ const TABS = [
   ["/companies", "Companies"],
   ["/headlines", "Headlines"],
   ["/teams", "Teams"],
+  ["/scores", "Scores"],
   ["/settings", "Settings"],
 ] as const;
 

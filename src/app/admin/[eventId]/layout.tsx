@@ -21,6 +21,8 @@ export default async function EventLayout({ children, params }: { children: Reac
   return (
     <div className="min-h-dvh">
       <AuthWatch role="organiser" />
+      {/* Printed pages (QR cards, scoring sheets) carry no app chrome. */}
+      <div className="print:hidden">
       <SiteHeader>
         <Link href={`/display/${event.id}`} target="_blank" className="hidden items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
           Projector <ExternalLink className="size-3.5" />
@@ -36,7 +38,8 @@ export default async function EventLayout({ children, params }: { children: Reac
           <AdminNav eventId={event.id} />
         </div>
       </div>
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      </div>
+      <main className="mx-auto max-w-6xl px-4 py-6 print:max-w-none print:p-0">{children}</main>
     </div>
   );
 }

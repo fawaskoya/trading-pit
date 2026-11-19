@@ -45,9 +45,9 @@ select is((select change_this_round from public.leaderboard_view where name = 'A
 select is((select status from public.events where id = 'e0000000-0000-0000-0000-000000000001'), 'finished', 'final round finishes the event');
 select is((select count(*) from public.portfolio_snapshots where round_id = 'a0000000-0000-0000-0000-000000000001'), 2::bigint, 'snapshot per team');
 
--- anon can read the leaderboard but not teams/holdings
+-- Equity is private: anon can read neither the leaderboard nor teams/holdings
 set local role anon;
-select is((select count(*) from public.leaderboard_view where event_id = 'e0000000-0000-0000-0000-000000000001'), 2::bigint, 'anon reads leaderboard view');
+select throws_ok($$select count(*) from public.leaderboard_view$$, '42501', null, 'anon cannot read the leaderboard view');
 select is((select count(*) from public.teams), 0::bigint, 'anon sees no team rows');
 select is(public.is_event_admin('e0000000-0000-0000-0000-000000000001'), false, 'anon may call is_event_admin (Realtime evaluates policies as anon)');
 select is(public.my_team_id(), null, 'anon may call my_team_id');

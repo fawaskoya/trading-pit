@@ -5,6 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/errors";
 import { integer, price as fmtPrice, rupees } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -41,7 +42,10 @@ export function TradeDrawer({ company, onClose, team, event, held, total, open, 
   const submit = () => start(async () => {
     if (!company) return;
     const { error } = await supabaseBrowser().rpc("execute_order", { p_company_id: company.id, p_side: side, p_shares: shares });
-    if (error) { toast.error(friendlyError(error)); onTraded(); return; }
+    if (error) {
+      logActivity("order_failed", company.id, { code: (error.message ?? "").trim(), side, shares, price });
+      toast.error(friendlyError(error)); onTraded(); return;
+    }
     toast.success(`${side === "buy" ? "Bought" : "Sold"} ${integer(shares)} ${company.ticker} for ${rupees(value)}`);
     onTraded();
     onClose();

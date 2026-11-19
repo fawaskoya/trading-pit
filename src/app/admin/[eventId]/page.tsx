@@ -13,7 +13,7 @@ export default async function ControlPage({ params }: { params: Promise<{ eventI
     supabase.from("events").select("*").eq("id", eventId).single(),
     supabase.from("rounds").select("*, round_notes(suggested_moves, shock_headline, shock_detail, shock_moves, shock_extend_sec)").eq("event_id", eventId).order("round_no"),
     supabase.from("companies").select("*").eq("event_id", eventId).order("sort_order"),
-    supabase.from("leaderboard_view").select("*").eq("event_id", eventId).order("rank"),
+    supabase.rpc("admin_leaderboard", { p_event_id: eventId }),  // organiser-only: teams never see each other's values
     supabase.from("teams").select("id, joined_at").eq("event_id", eventId),
   ]);
   if (!event) return null;

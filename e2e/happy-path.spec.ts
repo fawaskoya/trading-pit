@@ -52,7 +52,7 @@ async function buyMax(page: Page, companyName: string) {
   await expect(page.getByText(/^Bought/)).toBeVisible();
 }
 
-test("admin runs a round, two teams trade, leaderboard is correct", async ({ browser }) => {
+test("admin runs a round, two teams trade privately, and the organiser scores them", async ({ browser }) => {
   const { event, companies, round, teams } = await seed();
   const [teamA, teamB] = teams;
 
@@ -145,14 +145,24 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   expect(Number(c!.current_price)).toBe(120);
   expect(round.id).toBeTruthy();
 
-  // Projector shows the same order, and the team's phone updated without a reload.
+  // Equity is private: the projector shows no ranking, and teams see only their own value, never a rank.
   const display = await (await browser.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
-  await display.goto(`/display/${event.id}?view=leaderboard`);
-  const rows = display.locator("ol li");
-  await expect(rows.first()).toContainText("Team Alpha");
-  await expect(rows.nth(1)).toContainText("Team Beta");
-  await expect(a.getByText(/You're up/)).toBeVisible();
-  await expect(a.getByText("#1", { exact: true })).toBeVisible();
+  await display.goto(`/display/${event.id}`);
+  await expect(display.getByText("Market closed").first()).toBeVisible();
+  await expect(display.getByText("Team Beta")).toHaveCount(0);
+  await expect(a.getByText(/You finished with/)).toBeVisible();
+  await expect(a.getByRole("button", { name: "Ranks" })).toHaveCount(0);
+  await expect(a.getByText("#1", { exact: true })).toHaveCount(0);
+  // (The database also refuses the leaderboard to teams directly — covered by supabase/tests/007.)
+
+  // The organiser's Scores page judges both teams out of 20.
+  await admin.goto(`/admin/${event.id}/scores`);
+  await expect(admin.getByText("Scores out of 20")).toBeVisible();
+  await expect(admin.getByRole("row", { name: /Team Alpha/ })).toBeVisible();
+  await expect(admin.getByRole("row", { name: /Team Beta/ })).toBeVisible();
+  await admin.goto(`/admin/${event.id}/scores/print`);
+  await expect(admin.getByText("Marking scheme — out of 20")).toBeVisible();
+  await expect(admin.getByText("Chest no. Team Alpha")).toBeVisible();
 });
 
 test("a normal round finishes by itself: the planned % moves apply when the window closes", async ({ browser }) => {

@@ -1,6 +1,6 @@
 # Trading Pit
 
-A live stock-market simulation for college fests. Teams log in on their phones, react to news headlines an organiser releases each round, and buy/sell virtual shares inside a timed window. A projector shows the live leaderboard.
+A live stock-market simulation for college fests. Teams log in on their phones, react to news headlines an organiser releases each round, and buy/sell virtual shares inside a timed window. A projector shows the news, countdown and prices. Team values stay private, and the organiser picks winners with a judged score out of 20.
 
 **Stack:** Next.js 15 (App Router, TypeScript, Tailwind v4, shadcn/ui) · Supabase (Postgres, Auth, Realtime, RLS) · Vercel.
 
@@ -39,7 +39,8 @@ Useful scripts:
 | Script | What it does |
 |---|---|
 | `pnpm db:reset` | Recreate the local database from `supabase/migrations`, then seed |
-| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (82 tests) |
+| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (98 tests) |
+| `pnpm test:unit` | Unit tests for the score out of 20 (`src/lib/scoring.test.ts`) |
 | `pnpm db:types` | Regenerate `src/lib/database.types.ts` after changing the schema |
 | `pnpm test:e2e` | Playwright happy path (builds and starts a production server; needs `supabase start`) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm build` | Quality gates |
@@ -55,7 +56,7 @@ Useful scripts:
 - `apply_round_prices(round, [{company_id, new_price}])` — updates only the listed companies, records `price_updates`, snapshots every team's portfolio, advances the round, and marks the event finished after the last round.
 - `close_expired_windows()` — idempotent fallback run by `pg_cron` every minute and by any client whose countdown hits zero. Even if it lags, `execute_order` rejects late orders by time.
 
-**Security model (RLS):** teams see public event/round/price data plus their own team, holdings, orders and snapshots; only the event's creator can write (including team names). Companies are hidden from teams and the projector until the event's first trading window opens (`market_opened()`). The projector reads `leaderboard_view` and `equity_curve_view`, which expose team name, value, rank and round change — never cash or holdings. Unreleased headlines are invisible to teams, and the organiser's private "suggested moves" live in `round_notes`, which teams cannot read at all.
+**Security model (RLS):** teams see public event/round/price data plus their own team, holdings, orders and snapshots; only the event's creator can write (including team names). Companies are hidden from teams and the projector until the event's first trading window opens (`market_opened()`). No team, and not the projector, can read another team's value or rank: `leaderboard_view`, `equity_curve_view` and `team_total_value()` are closed to clients, and the organiser reads them through `admin_leaderboard()` / `admin_equity_curve()`. Every trade stores its context, `team_activity` logs what teams do (write-only for teams, rate-limited), and judges' `score_adjustments` are organiser-only. Unreleased headlines are invisible to teams, and the organiser's private "suggested moves" live in `round_notes`, which teams cannot read at all.
 
 **Sessions:** cookie-based via `@supabase/ssr`. Teams sign in anonymously and claim a join code, so a refresh, a closed tab or a phone reboot keeps them logged in. If a team loses their session, the organiser clicks *Reset login* and they rejoin with the same code.
 

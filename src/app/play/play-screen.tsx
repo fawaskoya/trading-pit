@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
 import { compactRupees, integer, pct, price as fmtPrice, rupees, signed } from "@/lib/format";
+import { logActivity } from "@/lib/activity";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
@@ -25,18 +26,30 @@ export type Company = Database["public"]["Tables"]["companies"]["Row"];
 export type Round = Database["public"]["Tables"]["rounds"]["Row"];
 export type Holding = { company_id: string; shares: number };
 export type Order = { id: number; round_id: string; company_id: string; side: "buy" | "sell"; shares: number; price: number; value: number; fee: number; created_at: string };
-export type Leader = { team_id: string | null; name: string | null; rank: number | null; total_value: number | null; trade_count: number | null };
-type Me = { rank: number | null; total_value: number | null; change_this_round: number | null; pnl: number | null };
 export type PriceUpdate = { round_id: string; company_id: string; old_price: number; new_price: number };
 export type Snapshot = { round_id: string; total_value: number; cash: number; holdings_value: number };
 
-export function PlayScreen({ team, event, companies, rounds, holdings, me, orders, leaders, priceUpdates, shockMoves, snapshots }: {
-  team: Team; event: Event; companies: Company[]; rounds: Round[]; holdings: Holding[]; me: Me | null; orders: Order[]; leaders: Leader[]; priceUpdates: PriceUpdate[]; shockMoves: PriceUpdate[]; snapshots: Snapshot[];
+export function PlayScreen({ team, event, companies, rounds, holdings, orders, priceUpdates, shockMoves, snapshots }: {
+  team: Team; event: Event; companies: Company[]; rounds: Round[]; holdings: Holding[]; orders: Order[]; priceUpdates: PriceUpdate[]; shockMoves: PriceUpdate[]; snapshots: Snapshot[];
 }) {
   const router = useRouter();
   useEventRealtime(event.id, undefined, undefined, 5000);
-  const [tab, setTab] = useState<"market" | "history" | "ranks">("market");
+  const [tab, setTab] = useState<"market" | "history">("market");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // For scoring: which scripts a team looked at, and whether it walked away without trading.
+  const opened = useRef<{ id: string; at: number; traded: boolean } | null>(null);
+  const openCompany = (id: string) => {
+    opened.current = { id, at: Date.now(), traded: false };
+    logActivity("open_company", id, { trading_open: tradingOpenRef.current });
+    setSelectedId(id);
+  };
+  const closeCompany = () => {
+    const o = opened.current;
+    if (o && !o.traded) logActivity("close_company_no_trade", o.id, { seconds_open: Math.round((Date.now() - o.at) / 1000) });
+    opened.current = null;
+    setSelectedId(null);
+  };
+  const switchTab = (k: "market" | "history") => { setTab(k); logActivity("tab_view", null, { tab: k }); };
   // Look the company up live, so the trade sheet never shows a price an Act of God has just changed.
   const selected = companies.find((c) => c.id === selectedId) ?? null;
 
@@ -47,7 +60,9 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   const lastApplied = [...rounds].reverse().find((r) => r.state === "prices_applied") ?? null;
   const secondsLeft = useCountdown(active?.state === "window_open" ? active.window_closes_at : null);
   const tradingOpen = active?.state === "window_open" && (secondsLeft === null || secondsLeft > 0);
-  // Until round 1's window opens, teams see only their own portfolio — no scrips, history or ranks.
+  const tradingOpenRef = useRef(tradingOpen);
+  tradingOpenRef.current = tradingOpen;
+  // Until round 1's window opens, teams see only their own portfolio — no scrips or history. (No team ever sees another team's value or rank.)
   // (The database hides the companies too; this is just the matching layout.)
   const marketOpen = rounds.some((r) => r.state === "window_open" || r.state === "window_closed" || r.state === "prices_applied");
   const teamName = team.name ?? `Team ${team.join_code}`;
@@ -56,7 +71,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
   const initial = !finished && !rounds.some((r) => r.state !== "pending");
   const shocked = !!active?.shock_at && (active.state === "window_open" || active.state === "window_closed");
 
-  // Act of God: make sure nobody misses it, even on the History or Ranks tab.
+  // Act of God: make sure nobody misses it, even on the History tab.
   const lastShock = useRef(active?.shock_at ?? null);
   useEffect(() => {
     const at = active?.shock_at ?? null;
@@ -142,12 +157,6 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
               <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Portfolio value</p>
               <p className="num mt-1 font-heading text-4xl font-extrabold tracking-tight">{rupees(total)}</p>
             </div>
-            {marketOpen && (
-              <div className="rounded-xl bg-primary/15 px-3 py-2 text-center">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Rank</p>
-                <p className="font-heading text-2xl font-extrabold leading-none">#{me?.rank ?? "–"}</p>
-              </div>
-            )}
           </div>
           <p className={cn("mt-2 text-sm font-medium", pnl > 0 && "text-gain", pnl < 0 && "text-loss", pnl === 0 && "text-muted-foreground")}>
             {pnl === 0 ? "You're at your starting capital." : pnl > 0 ? `You're up ${rupees(pnl)} (${pct(pnlPct)}) since the start.` : `You're down ${rupees(-pnl)} (${pct(pnlPct)}) since the start.`}
@@ -183,7 +192,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
               <Trophy className="size-8 text-primary" />
               <div>
                 <p className="text-lg font-bold">The market has closed.</p>
-                <p className="text-sm text-muted-foreground">You finished #{me?.rank ?? "–"} with {rupees(total)}. Check the Ranks tab.</p>
+                <p className="text-sm text-muted-foreground">You finished with {rupees(total)}. Results will be announced by the organisers.</p>
               </div>
             </div>
           ) : active && active.state !== "pending" && active.headline ? (
@@ -207,9 +216,9 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
 
         {marketOpen && <div className="mt-4 space-y-4 lg:mt-0">
         {/* Tabs */}
-        <div className="grid grid-cols-3 rounded-lg bg-muted p-1 text-sm font-medium lg:max-w-sm">
-          {([["market", "Market"], ["history", "History"], ["ranks", "Ranks"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)} className={cn("rounded-md py-2 transition", tab === k ? "bg-background shadow-sm" : "text-muted-foreground")}>{label}</button>
+        <div className="grid grid-cols-2 rounded-lg bg-muted p-1 text-sm font-medium lg:max-w-sm">
+          {([["market", "Market"], ["history", "History"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => switchTab(k)} className={cn("rounded-md py-2 transition", tab === k ? "bg-background shadow-sm" : "text-muted-foreground")}>{label}</button>
           ))}
         </div>
 
@@ -217,25 +226,24 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
           <div className="space-y-2">
             <p className="px-1 text-xs text-muted-foreground">{tradingOpen ? "Select a company to buy or sell." : "Select a company to see details. Trading opens with the window."}</p>
             <div className="grid gap-2 xl:grid-cols-2">
-              {companies.map((c) => <CompanyRow key={c.id} c={c} shares={held[c.id] ?? 0} onClick={() => setSelectedId(c.id)} />)}
+              {companies.map((c) => <CompanyRow key={c.id} c={c} shares={held[c.id] ?? 0} onClick={() => openCompany(c.id)} />)}
             </div>
           </div>
         )}
         {tab === "history" && <HistoryTab event={event} rounds={rounds} companies={companies} orders={orders} priceUpdates={priceUpdates} shockMoves={shockMoves} snapshots={snapshots} currentTotal={total} />}
-        {tab === "ranks" && <Ranks leaders={leaders} myId={team.id} />}
         </div>}
       </main>
 
       <TradeDrawer
         company={selected}
-        onClose={() => setSelectedId(null)}
+        onClose={closeCompany}
         team={team}
         event={event}
         held={selected ? held[selected.id] ?? 0 : 0}
         total={total}
         open={tradingOpen}
         reason={!active ? "The event hasn't started." : active.state === "window_open" ? null : active.state === "pending" || active.state === "headline_released" ? "The trading window hasn't opened yet." : "The trading window is closed."}
-        onTraded={() => router.refresh()}
+        onTraded={() => { if (opened.current) opened.current.traded = true; router.refresh(); }}
       />
     </div>
   );
@@ -278,20 +286,6 @@ function CompanyRow({ c, shares, onClick }: { c: Company; shares: number; onClic
       </div>
       <ChevronRight className="size-4 text-muted-foreground" />
     </button>
-  );
-}
-
-function Ranks({ leaders, myId }: { leaders: Leader[]; myId: string }) {
-  return (
-    <Card className="divide-y">
-      {leaders.map((l) => (
-        <div key={l.team_id} className={cn("flex items-center gap-3 px-4 py-3", l.team_id === myId && "bg-primary/10")}>
-          <span className="w-6 font-mono text-sm text-muted-foreground">{l.rank}</span>
-          <span className="flex-1 truncate font-medium">{l.name}{l.team_id === myId && <span className="ml-2 text-xs text-primary">you</span>}</span>
-          <span className="num font-mono text-sm">{compactRupees(l.total_value)}</span>
-        </div>
-      ))}
-    </Card>
   );
 }
 

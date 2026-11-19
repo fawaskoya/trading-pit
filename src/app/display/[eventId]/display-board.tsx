@@ -1,9 +1,9 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
-import { compactRupees, pct, price as fmtPrice } from "@/lib/format";
+import { pct, price as fmtPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Event = { id: string; name: string; status: string; total_rounds: number; starting_capital: number };
@@ -12,11 +12,9 @@ type Round = {
   shock_headline: string | null; shock_detail: string | null; shock_extend_sec: number | null; shock_at: string | null;
 };
 type Company = { id: string; name: string; ticker: string; sector: string | null; current_price: number; last_change_pct: number };
-type Leader = { team_id: string | null; name: string | null; college: string | null; total_value: number | null; rank: number | null; change_this_round: number | null; change_this_round_pct: number | null; pnl: number | null };
-type Point = { team_id: string | null; round_no: number | null; total_value: number | null };
-type View = "leaderboard" | "headline" | "prices";
+type View = "headline" | "prices";
 
-export function DisplayBoard({ host, event, rounds, companies, leaders, curve, pinned }: { host: string; event: Event; rounds: Round[]; companies: Company[]; leaders: Leader[]; curve: Point[]; pinned: View | null }) {
+export function DisplayBoard({ host, event, rounds, companies, pinned }: { host: string; event: Event; rounds: Round[]; companies: Company[]; pinned: View | null }) {
   // The projector is anonymous, so it can't subscribe to team/holdings changes — the hook's poll covers those.
   useEventRealtime(event.id, ["rounds", "companies"], undefined, 5000);
 
@@ -31,13 +29,9 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
 
   // No auto-rotation: the organiser scrolls (wheel, Page Down or a presenter clicker). `?view=` pins one section.
   const shocked = !!active?.shock_at && (active.state === "window_open" || active.state === "window_closed");
-  const sections: View[] = pinned ? [pinned] : finished ? ["leaderboard", "prices"] : ["headline", "leaderboard", "prices"];
+  // Team values and ranks are private to the organiser, so the projector shows only news and prices.
+  const sections: View[] = pinned ? [pinned] : ["headline", "prices"];
 
-  const spark = useMemo(() => {
-    const byTeam: Record<string, number[]> = {};
-    for (const p of curve) if (p.team_id) (byTeam[p.team_id] ??= [Number(event.starting_capital)]).push(Number(p.total_value));
-    return byTeam;
-  }, [curve, event.starting_capital]);
 
   // The panels sit side by side and the presenter moves between them: wheel, arrow keys, Page Down/Up or Space
   // (a clicker sends these), or the dots at the bottom. Nothing rotates by itself.
@@ -90,7 +84,7 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
           </div>
           <div className="text-right">
             {finished ? (
-              <p className="font-heading text-3xl font-bold">Final results</p>
+              <p className="font-heading text-3xl font-bold">Market closed</p>
             ) : (
               <>
                 <p className="text-sm uppercase tracking-[0.3em] text-white/60">Round {upcomingNo} of {event.total_rounds}</p>
@@ -120,8 +114,7 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
           {sections.map((v) => (
             <section key={v} id={v} data-vscroll className="h-full w-full shrink-0 snap-start overflow-y-auto pr-1">
               {sections.length > 1 && <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/40">{SECTION_LABEL[v]}</p>}
-              {v === "leaderboard" && <Leaderboard leaders={leaders} spark={spark} finished={finished} lastRound={lastApplied?.round_no ?? null} />}
-              {v === "headline" && <Headline active={active} windowOpen={windowOpen} secondsLeft={secondsLeft} />}
+              {v === "headline" && <Headline active={active} windowOpen={windowOpen} secondsLeft={secondsLeft} finished={finished} />}
               {v === "prices" && <Prices companies={companies} />}
             </section>
           ))}
@@ -146,7 +139,7 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
   );
 }
 
-const SECTION_LABEL: Record<View, string> = { headline: "Headline", leaderboard: "Leaderboard", prices: "Market prices" };
+const SECTION_LABEL: Record<View, string> = { headline: "Headline", prices: "Market prices" };
 
 function stateLabel(state: string | undefined) {
   switch (state) {
@@ -157,73 +150,10 @@ function stateLabel(state: string | undefined) {
   }
 }
 
-function Leaderboard({ leaders, spark, finished, lastRound }: { leaders: Leader[]; spark: Record<string, number[]>; finished: boolean; lastRound: number | null }) {
-  const top = leaders.slice(0, 20);
-  // Up to 8 teams: big rows with a trend line. More than that: two compact columns so 15–20 teams fit one screen.
-  const compact = top.length > 8;
-  const change = (l: Leader) => Number(l.change_this_round ?? 0);
-  if (compact) {
-    const rows = Math.ceil(top.length / 2);
-    return (
-      <ol className="grid grid-flow-col gap-x-6 gap-y-2" style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
-        {top.map((l, i) => {
-          const d = change(l);
-          return (
-            <li key={l.team_id} className={cn("grid grid-cols-[3rem_1fr_9rem_7.5rem] items-center gap-3 rounded-xl px-4 py-2 ring-1 ring-white/10", i === 0 ? "bg-[oklch(0.8_0.15_75)]/15 ring-[oklch(0.8_0.15_75)]/50" : "bg-white/[0.04]")}>
-              <span className={cn("font-heading text-3xl font-extrabold", i === 0 && "text-[oklch(0.8_0.15_75)]")}>{finished && i === 0 ? "🏆" : l.rank}</span>
-              <div className="min-w-0">
-                <p className="truncate font-heading text-2xl font-bold leading-tight">{l.name}</p>
-                {l.college && <p className="truncate text-sm text-white/50">{l.college}</p>}
-              </div>
-              <span className="num text-right font-mono text-2xl font-semibold">{compactRupees(l.total_value)}</span>
-              <span className={cn("num text-right font-mono text-xl", d > 0 && "text-[oklch(0.78_0.17_155)]", d < 0 && "text-[oklch(0.72_0.19_25)]", d === 0 && "text-white/40")}>{d === 0 ? "—" : `${d > 0 ? "▲" : "▼"} ${pct(l.change_this_round_pct, 1)}`}</span>
-            </li>
-          );
-        })}
-      </ol>
-    );
+function Headline({ active, windowOpen, secondsLeft, finished }: { active: Round | null; windowOpen: boolean; secondsLeft: number | null; finished: boolean }) {
+  if (finished) {
+    return <Center><p className="font-heading text-7xl font-extrabold">Market closed</p><p className="mt-6 text-3xl text-white/60">Thank you for trading. Results will be announced by the organisers.</p></Center>;
   }
-  return (
-    <div>
-      <div className="mb-3 grid grid-cols-[4rem_1fr_14rem_12rem_10rem] items-end gap-4 px-6 text-sm uppercase tracking-[0.2em] text-white/50">
-        <span>#</span><span>Team</span><span className="text-right">Portfolio</span><span className="text-right">{lastRound ? `Round ${lastRound}` : "Change"}</span><span className="text-right">Trend</span>
-      </div>
-      <ol className="space-y-2">
-        {top.map((l, i) => {
-          const d = change(l);
-          return (
-            <li key={l.team_id} className={cn("grid grid-cols-[4rem_1fr_14rem_12rem_10rem] items-center gap-4 rounded-2xl px-6 py-3 ring-1 ring-white/10", i === 0 ? "bg-[oklch(0.8_0.15_75)]/15 ring-[oklch(0.8_0.15_75)]/50" : "bg-white/[0.04]")}>
-              <span className={cn("font-heading text-4xl font-extrabold", i === 0 && "text-[oklch(0.8_0.15_75)]")}>{finished && i === 0 ? "🏆" : l.rank}</span>
-              <div className="min-w-0">
-                <p className="truncate font-heading text-3xl font-bold">{l.name}</p>
-                {l.college && <p className="truncate text-base text-white/50">{l.college}</p>}
-              </div>
-              <span className="num text-right font-mono text-3xl font-semibold">{compactRupees(l.total_value)}</span>
-              <span className={cn("num text-right font-mono text-2xl", d > 0 && "text-[oklch(0.78_0.17_155)]", d < 0 && "text-[oklch(0.72_0.19_25)]", d === 0 && "text-white/40")}>{d === 0 ? "—" : `${d > 0 ? "▲" : "▼"} ${pct(l.change_this_round_pct, 1)}`}</span>
-              <Sparkline points={spark[l.team_id ?? ""] ?? []} />
-            </li>
-          );
-        })}
-        {!top.length && <li className="py-20 text-center text-3xl text-white/40">Teams are joining…</li>}
-      </ol>
-    </div>
-  );
-}
-
-function Sparkline({ points }: { points: number[] }) {
-  if (points.length < 2) return <span className="block h-10" />;
-  const min = Math.min(...points), max = Math.max(...points), range = max - min || 1;
-  const w = 140, h = 40;
-  const d = points.map((p, i) => `${(i / (points.length - 1)) * w},${h - ((p - min) / range) * (h - 4) - 2}`).join(" ");
-  const up = points[points.length - 1] >= points[0];
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="ml-auto h-10 w-[140px]" preserveAspectRatio="none">
-      <polyline points={d} fill="none" stroke={up ? "oklch(0.78 0.17 155)" : "oklch(0.72 0.19 25)"} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Headline({ active, windowOpen, secondsLeft }: { active: Round | null; windowOpen: boolean; secondsLeft: number | null }) {
   if (!active || active.state === "pending") {
     return <Center><p className="font-heading text-6xl font-extrabold text-white/80">Next round starting soon</p><p className="mt-4 text-3xl text-white/50">Get your strategy ready.</p></Center>;
   }

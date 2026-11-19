@@ -1,5 +1,6 @@
 "use client";
 import { friendlyError } from "@/lib/errors";
+import { logActivity } from "@/lib/activity";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 /** Set while we sign out on purpose, so the unexpected-sign-out watcher can tell the difference. */
@@ -27,7 +28,9 @@ export async function joinTeam(joinCode: string): Promise<AuthResult> {
       if (error) return fail(error);
     }
     const { error } = await supabase.rpc("claim_team", { p_join_code: joinCode });
-    return error ? fail(error) : { ok: true };
+    if (error) return fail(error);
+    logActivity("join", null, { device: typeof navigator !== "undefined" && /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "phone" : "laptop" });
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

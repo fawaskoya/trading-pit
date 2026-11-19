@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { logActivity } from "@/lib/activity";
 
 const KEY = "tp-recover";
 const isStaleChunk = (e: Error) => /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported|error loading dynamically imported|Importing a module script failed/i.test(`${e.name} ${e.message}`);
@@ -13,6 +14,7 @@ export function Recover({ error, reset }: { error: Error & { digest?: string }; 
   const [gaveUp, setGaveUp] = useState(false);
   useEffect(() => {
     console.error("[recover]", error);
+    logActivity("reconnect", null, { message: String(error?.message ?? "").slice(0, 200) });
     let tries = 0;
     try { tries = Number(sessionStorage.getItem(KEY) ?? 0); } catch { /* private mode */ }
     if (tries >= 4) { setGaveUp(true); return; }

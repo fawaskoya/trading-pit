@@ -168,36 +168,51 @@ export type Database = {
       }
       orders: {
         Row: {
+          after_shock: boolean | null
+          cash_before: number | null
           company_id: string
           created_at: string
           fee: number
           id: number
+          portfolio_before: number | null
+          position_pct_after: number | null
           price: number
           round_id: string
+          seconds_into_window: number | null
           shares: number
           side: Database["public"]["Enums"]["order_side"]
           team_id: string
           value: number
         }
         Insert: {
+          after_shock?: boolean | null
+          cash_before?: number | null
           company_id: string
           created_at?: string
           fee?: number
           id?: number
+          portfolio_before?: number | null
+          position_pct_after?: number | null
           price: number
           round_id: string
+          seconds_into_window?: number | null
           shares: number
           side: Database["public"]["Enums"]["order_side"]
           team_id: string
           value: number
         }
         Update: {
+          after_shock?: boolean | null
+          cash_before?: number | null
           company_id?: string
           created_at?: string
           fee?: number
           id?: number
+          portfolio_before?: number | null
+          position_pct_after?: number | null
           price?: number
           round_id?: string
+          seconds_into_window?: number | null
           shares?: number
           side?: Database["public"]["Enums"]["order_side"]
           team_id?: string
@@ -419,6 +434,55 @@ export type Database = {
           },
         ]
       }
+      score_adjustments: {
+        Row: {
+          delta: number
+          event_id: string
+          note: string | null
+          section: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          delta?: number
+          event_id: string
+          note?: string | null
+          section: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          delta?: number
+          event_id?: string
+          note?: string | null
+          section?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_adjustments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_adjustments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_view"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "score_adjustments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shock_price_changes: {
         Row: {
           company_id: string
@@ -457,6 +521,75 @@ export type Database = {
             columns: ["round_id"]
             isOneToOne: false
             referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_activity: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          detail: Json
+          event_id: string
+          id: number
+          kind: string
+          round_id: string | null
+          team_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_id: string
+          id?: number
+          kind: string
+          round_id?: string | null
+          team_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          detail?: Json
+          event_id?: string
+          id?: number
+          kind?: string
+          round_id?: string | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_activity_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_activity_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_activity_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_activity_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_view"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_activity_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -615,6 +748,43 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_equity_curve: {
+        Args: { p_event_id: string }
+        Returns: {
+          event_id: string | null
+          round_no: number | null
+          team_id: string | null
+          total_value: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "equity_curve_view"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      admin_leaderboard: {
+        Args: { p_event_id: string }
+        Returns: {
+          change_this_round: number | null
+          change_this_round_pct: number | null
+          college: string | null
+          event_id: string | null
+          joined: boolean | null
+          name: string | null
+          pnl: number | null
+          rank: number | null
+          team_id: string | null
+          total_value: number | null
+          trade_count: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "leaderboard_view"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       apply_round_prices: {
         Args: { p_prices: Json; p_round_id: string }
         Returns: {
@@ -693,12 +863,17 @@ export type Database = {
           p_side: Database["public"]["Enums"]["order_side"]
         }
         Returns: {
+          after_shock: boolean | null
+          cash_before: number | null
           company_id: string
           created_at: string
           fee: number
           id: number
+          portfolio_before: number | null
+          position_pct_after: number | null
           price: number
           round_id: string
+          seconds_into_window: number | null
           shares: number
           side: Database["public"]["Enums"]["order_side"]
           team_id: string
@@ -742,6 +917,10 @@ export type Database = {
         }
       }
       is_event_admin: { Args: { p_event_id: string }; Returns: boolean }
+      log_activity: {
+        Args: { p_company_id?: string; p_detail?: Json; p_kind: string }
+        Returns: undefined
+      }
       market_opened: { Args: { p_event_id: string }; Returns: boolean }
       my_team_id: { Args: never; Returns: string }
       open_window: {
