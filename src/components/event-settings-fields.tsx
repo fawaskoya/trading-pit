@@ -7,10 +7,10 @@ import { rupees } from "@/lib/format";
 
 export type EventFormValues = {
   name: string; starting_capital: number; total_rounds: number; round_duration_sec: number;
-  fee_pct: number; allow_short: boolean; max_position_pct: number;
+  fee_pct: number; allow_short: boolean; max_position_pct: number; auto_apply_prices: boolean;
 };
 export const DEFAULT_EVENT: EventFormValues = {
-  name: "", starting_capital: 100000000, total_rounds: 6, round_duration_sec: 180, fee_pct: 0, allow_short: false, max_position_pct: 100,
+  name: "", starting_capital: 100000000, total_rounds: 10, round_duration_sec: 180, fee_pct: 0, allow_short: false, max_position_pct: 100, auto_apply_prices: true,
 };
 
 export function EventSettingsFields({ value, onChange, roundsLocked = false }: { value: EventFormValues; onChange: (v: EventFormValues) => void; roundsLocked?: boolean }) {
@@ -31,6 +31,15 @@ export function EventSettingsFields({ value, onChange, roundsLocked = false }: {
         <Field label="Window length (seconds)" htmlFor="dur" hint={`${Math.floor(value.round_duration_sec / 60)}m ${value.round_duration_sec % 60}s`}>
           <Input id="dur" type="number" min={10} max={3600} value={value.round_duration_sec} onChange={(e) => set("round_duration_sec", Number(e.target.value))} />
         </Field>
+      </div>
+      <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4">
+        <Switch id="auto" checked={value.auto_apply_prices} onCheckedChange={(c) => set("auto_apply_prices", c)} className="mt-0.5" />
+        <div>
+          <Label htmlFor="auto">Apply each round&apos;s planned prices automatically</Label>
+          <p className="mt-1 text-xs text-muted-foreground">{value.auto_apply_prices
+            ? "When a window closes, the % moves you planned for that round are applied at once and the round finishes. After an Act of God, you finish the round with one click."
+            : "Off: after each window you review the price table and click Apply yourself."}</p>
+        </div>
       </div>
       <button type="button" className="text-sm text-primary underline-offset-4 hover:underline" onClick={() => setAdvanced(!advanced)}>
         {advanced ? "Hide advanced rules" : "Advanced rules (fees, short-selling, position cap)"}

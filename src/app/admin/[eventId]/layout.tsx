@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
 import { organiserLoginPath } from "@/lib/paths";
 import { getSessionUser } from "@/lib/supabase/server";
+import { AuthWatch } from "@/components/auth-watch";
 import { SignOutButton } from "../sign-out-button";
 import { AdminNav } from "./admin-nav";
 
@@ -19,6 +20,7 @@ export default async function EventLayout({ children, params }: { children: Reac
 
   return (
     <div className="min-h-dvh">
+      <AuthWatch role="organiser" />
       <SiteHeader>
         <Link href={`/display/${event.id}`} target="_blank" className="hidden items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
           Projector <ExternalLink className="size-3.5" />

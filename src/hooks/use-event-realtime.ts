@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type Table = "rounds" | "companies" | "teams" | "holdings" | "orders";
@@ -11,6 +11,20 @@ type Table = "rounds" | "companies" | "teams" | "holdings" | "orders";
  */
 export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "companies", "teams", "holdings", "orders"], onChange?: () => void, pollMs = 4000) {
   const router = useRouter();
+  // At most one page refresh in flight, and not more often than every 1.2s. A burst of realtime events plus the
+  // poll used to fire several overlapping refreshes, each one hitting the login-token refresh at the same moment.
+  const [refreshing, startRefresh] = useTransition();
+  const inFlight = useRef(false);
+  inFlight.current = refreshing;
+  const lastRefresh = useRef(0);
+  const refresh = () => {
+    if (inFlight.current || Date.now() - lastRefresh.current < 1200) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+    lastRefresh.current = Date.now();
+    startRefresh(() => router.refresh());
+  };
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cb = useRef(onChange);
   cb.current = onChange;
@@ -19,7 +33,7 @@ export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "
     const supabase = supabaseBrowser();
     const bump = () => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => { cb.current?.(); router.refresh(); }, 250);
+      timer.current = setTimeout(() => { cb.current?.(); refreshRef.current(); }, 250);
     };
     let channel = supabase.channel(`event:${eventId}:${tables.join(",")}`);
     for (const table of tables) {
@@ -33,7 +47,7 @@ export function useEventRealtime(eventId: string, tables: Table[] = ["rounds", "
     // and poll gently so a missed message can never leave a screen stale during the event.
     const onVisible = () => { if (document.visibilityState === "visible") bump(); };
     document.addEventListener("visibilitychange", onVisible);
-    const poll = pollMs > 0 ? setInterval(() => { if (document.visibilityState === "visible") router.refresh(); }, pollMs) : null;
+    const poll = pollMs > 0 ? setInterval(() => { if (document.visibilityState === "visible") refreshRef.current(); }, pollMs) : null;
     return () => {
       if (poll) clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);

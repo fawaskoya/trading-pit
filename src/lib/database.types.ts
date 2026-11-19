@@ -84,6 +84,7 @@ export type Database = {
       events: {
         Row: {
           allow_short: boolean
+          auto_apply_prices: boolean
           created_at: string
           created_by: string
           fee_pct: number
@@ -97,6 +98,7 @@ export type Database = {
         }
         Insert: {
           allow_short?: boolean
+          auto_apply_prices?: boolean
           created_at?: string
           created_by: string
           fee_pct?: number
@@ -110,6 +112,7 @@ export type Database = {
         }
         Update: {
           allow_short?: boolean
+          auto_apply_prices?: boolean
           created_at?: string
           created_by?: string
           fee_pct?: number
@@ -588,6 +591,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _apply_round_prices_core: {
+        Args: { p_prices: Json; p_round_id: string }
+        Returns: {
+          applied_at: string | null
+          event_id: string
+          headline: string | null
+          headline_detail: string | null
+          id: string
+          round_no: number
+          shock_at: string | null
+          shock_detail: string | null
+          shock_extend_sec: number | null
+          shock_headline: string | null
+          state: Database["public"]["Enums"]["round_state"]
+          window_closes_at: string | null
+          window_opens_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rounds"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_round_prices: {
         Args: { p_prices: Json; p_round_id: string }
         Returns: {
@@ -612,6 +639,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      auto_finish_round: { Args: { p_round_id: string }; Returns: undefined }
       claim_team: {
         Args: { p_join_code: string; p_team_name?: string }
         Returns: {
@@ -740,6 +768,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      planned_prices: { Args: { p_round_id: string }; Returns: Json }
       release_headline: {
         Args: { p_round_id: string }
         Returns: {

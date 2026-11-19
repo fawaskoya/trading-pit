@@ -2,6 +2,9 @@
 import { friendlyError } from "@/lib/errors";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
+/** Set while we sign out on purpose, so the unexpected-sign-out watcher can tell the difference. */
+export const signOutState = { intentional: false };
+
 export type AuthResult = { ok: true } | { ok: false; error: string; code?: string };
 
 const fail = (e: unknown): AuthResult => ({
@@ -53,5 +56,6 @@ export async function signInOrganiser(mode: "signin" | "signup", email: string, 
 }
 
 export async function signOut(): Promise<void> {
+  signOutState.intentional = true;
   await supabaseBrowser().auth.signOut();
 }

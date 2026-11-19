@@ -8,8 +8,8 @@ values ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000
        ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', null, '', null, now(), now(), '{}', '{}'),
        ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', null, '', null, now(), now(), '{}', '{}');
 
-insert into public.events (id, name, starting_capital, total_rounds, round_duration_sec, fee_pct, created_by)
-values ('e0000000-0000-0000-0000-000000000001', 'Test Fest', 100000, 2, 60, 0.5, '00000000-0000-0000-0000-00000000000a');
+insert into public.events (id, name, starting_capital, total_rounds, round_duration_sec, fee_pct, created_by, auto_apply_prices)
+values ('e0000000-0000-0000-0000-000000000001', 'Test Fest', 100000, 2, 60, 0.5, '00000000-0000-0000-0000-00000000000a', false);
 
 insert into public.companies (id, event_id, name, ticker, starting_price, current_price)
 values ('c0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', 'Infosys', 'INFY', 1234.55, 1234.55),

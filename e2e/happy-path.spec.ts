@@ -13,7 +13,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const service = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 const ADMIN = { email: "", password: "e2e-password" };
 
-async function seed() {
+async function seed(plannedMoves?: string) {
   ADMIN.email = `e2e-admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@tradingpit.local`;
   const { data: u, error: uErr } = await service.auth.admin.createUser({ ...ADMIN, email_confirm: true });
   if (uErr) throw uErr;
@@ -23,6 +23,7 @@ async function seed() {
     { event_id: event!.id, name: "Beta Ltd", ticker: "BETA", sector: "Retail", starting_price: 50, current_price: 50, sort_order: 1 },
   ]).select().throwOnError();
   const { data: round } = await service.from("rounds").insert({ event_id: event!.id, round_no: 1, headline: "Alpha wins a huge contract" }).select().single().throwOnError();
+  if (plannedMoves) await service.from("round_notes").insert({ round_id: round!.id, suggested_moves: plannedMoves }).throwOnError();
   const { data: teams } = await service.from("teams").insert([{ event_id: event!.id, name: "Team Alpha" }, { event_id: event!.id, name: "Team Beta" }]).select().throwOnError();
   return { event: event!, companies: companies!, round: round!, teams: teams! };
 }
@@ -124,14 +125,16 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
 
   // Trading after close is rejected server-side.
   await admin.getByRole("button", { name: /Close window now/ }).click();
-  await expect(admin.getByText("Enter new prices")).toBeVisible();
+  // After an Act of God the prices are already set: the organiser just finishes the round.
+  await expect(admin.getByText("The Act of God already moved prices")).toBeVisible();
   await expect(a.getByText(/Window closed/)).toBeVisible();
 
-  // Admin moves Alpha +20% (Beta unchanged) and applies.
+  // Admin adds an extra +20% on Alpha (Beta stays where the Act of God left it) and finishes the round.
   const alpha = companies.find((c) => c.ticker === "ALPHA")!;
+  await admin.getByRole("button", { name: /Add extra price moves/ }).click();
   await admin.getByRole("row", { name: /ALPHA/ }).getByRole("textbox").fill("20");
   await expect(admin.getByText("1 of 2 companies will move.")).toBeVisible();
-  await admin.getByRole("button", { name: /Apply prices & finish round/ }).click();
+  await admin.getByRole("button", { name: /Finish round 1/ }).click();
   await expect(admin.getByText("Event complete")).toBeVisible();
 
   // Database agrees: Team Alpha (holding the mover) ranks first.
@@ -150,4 +153,26 @@ test("admin runs a round, two teams trade, leaderboard is correct", async ({ bro
   await expect(rows.nth(1)).toContainText("Team Beta");
   await expect(a.getByText(/You're up/)).toBeVisible();
   await expect(a.getByText("#1", { exact: true })).toBeVisible();
+});
+
+test("a normal round finishes by itself: the planned % moves apply when the window closes", async ({ browser }) => {
+  const { event, companies } = await seed("ALPHA +20%, BETA -10%");
+  const ctx = await browser.newContext();
+  const admin = await ctx.newPage();
+  await admin.goto("/login?as=organiser");
+  await admin.getByLabel("Email").fill(ADMIN.email);
+  await admin.getByLabel("Password").fill(ADMIN.password);
+  await admin.getByRole("button", { name: "Sign in" }).click();
+  await expect(admin.getByText("Your events")).toBeVisible();
+  await admin.goto(`/admin/${event.id}`);
+  await admin.getByRole("button", { name: /Release headline/ }).click();
+  await admin.getByRole("button", { name: /Open trading window/ }).click();
+  await expect(admin.getByText(/planned price moves? apply automatically/)).toBeVisible();
+
+  // No price entry at all: closing the window finishes the round.
+  await admin.getByRole("button", { name: /Close window now/ }).click();
+  await expect(admin.getByText("Event complete")).toBeVisible();
+  const price = async (ticker: string) => Number((await service.from("companies").select("current_price").eq("id", companies.find((c) => c.ticker === ticker)!.id).single()).data!.current_price);
+  expect(await price("ALPHA")).toBe(120);
+  expect(await price("BETA")).toBe(45);
 });

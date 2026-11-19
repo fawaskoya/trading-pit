@@ -8,6 +8,7 @@ export const eventSchema = z.object({
   fee_pct: z.coerce.number().min(0).max(99.99),
   allow_short: z.coerce.boolean().default(false),
   max_position_pct: z.coerce.number().min(1).max(100),
+  auto_apply_prices: z.boolean().default(true),
 });
 export type EventInput = z.infer<typeof eventSchema>;
 

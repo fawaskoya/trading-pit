@@ -30,7 +30,7 @@ pnpm seed                      # demo event: 20 Indian large caps, 6 headlines, 
 pnpm dev                       # http://localhost:3000
 ```
 
-`pnpm seed` prints the admin login (`admin@tradingpit.local` / `tradingpit`), ten team join codes (chest numbers SPC-01 to SPC-10) and the projector URL. The demo event has 10 rounds of trap headlines, with an Act of God drafted for rounds 4, 7 and 9.
+`pnpm seed` prints the admin login (`admin@tradingpit.local` / `tradingpit`), fifteen team join codes (chest numbers SPC-01 to SPC-15; 11–15 are spare for late registrations) and the projector URL. The demo event has 10 rounds of trap headlines, with an Act of God drafted for every round.
 
 **Demo mode (local only).** With `DEMO_MODE=1` in `.env.local` and the seed in place, the home page gains a *Try the demo* panel: **Play as a guest team** (creates a fresh team and joins it), **Run it as organiser** (signs in as the seeded admin and opens the control room) and **Open the projector** — no credentials to hand out. It is off unless that variable is set, and it needs the service-role key, which is never configured on Vercel. One browser profile holds one session, so play the guest team in a private window or on a phone while the organiser console is open.
 
@@ -39,7 +39,7 @@ Useful scripts:
 | Script | What it does |
 |---|---|
 | `pnpm db:reset` | Recreate the local database from `supabase/migrations`, then seed |
-| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (67 tests) |
+| `pnpm db:test` | pgTAP unit tests for the trading engine, guards and RLS (82 tests) |
 | `pnpm db:types` | Regenerate `src/lib/database.types.ts` after changing the schema |
 | `pnpm test:e2e` | Playwright happy path (builds and starts a production server; needs `supabase start`) |
 | `pnpm typecheck` / `pnpm lint` / `pnpm build` | Quality gates |

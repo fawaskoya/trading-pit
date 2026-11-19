@@ -6,8 +6,8 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, c
 values ('00000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@test.local', '', now(), now(), '{}', '{}'),
        ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', null, '', now(), now(), '{}', '{}'),
        ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', null, '', now(), now(), '{}', '{}');
-insert into public.events (id, name, starting_capital, total_rounds, round_duration_sec, created_by)
-values ('e0000000-0000-0000-0000-000000000001', 'Test Fest', 100000, 1, 60, '00000000-0000-0000-0000-00000000000a');
+insert into public.events (id, name, starting_capital, total_rounds, round_duration_sec, created_by, auto_apply_prices)
+values ('e0000000-0000-0000-0000-000000000001', 'Test Fest', 100000, 1, 60, '00000000-0000-0000-0000-00000000000a', false);
 insert into public.companies (id, event_id, name, ticker, starting_price, current_price)
 values ('c0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', 'Infosys', 'INFY', 1000, 1000);
 insert into public.rounds (id, event_id, round_no, headline)

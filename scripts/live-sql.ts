@@ -45,7 +45,7 @@ HEADLINES.forEach((h, i) => {
 });
 out.push("");
 TEAMS.forEach(([name, captain, college]) => {
-  out.push(`  insert into public.teams (event_id, name, college, member_names) values (v_event, ${q(name)}, ${q(college)}, array[${q(captain)}]);`);
+  out.push(`  insert into public.teams (event_id, name, college, member_names) values (v_event, ${q(name)}, ${college ? q(college) : "null"}, ${captain ? `array[${q(captain)}]` : "'{}'"});`);
 });
 out.push(`end $$;
 

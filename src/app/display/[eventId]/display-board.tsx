@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { useCountdown } from "@/hooks/use-server-clock";
@@ -39,10 +39,51 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
     return byTeam;
   }, [curve, event.starting_capital]);
 
+  // The panels sit side by side and the presenter moves between them: wheel, arrow keys, Page Down/Up or Space
+  // (a clicker sends these), or the dots at the bottom. Nothing rotates by itself.
+  const strip = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const goTo = useCallback((i: number) => {
+    const el = strip.current;
+    if (!el) return;
+    const n = Math.max(0, Math.min(sections.length - 1, i));
+    el.scrollTo({ left: n * el.clientWidth, behavior: "smooth" });
+  }, [sections.length]);
+  useEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const onScroll = () => setIndex(Math.round(el.scrollLeft / el.clientWidth));
+    // A normal mouse wheel only scrolls up/down; turn it into a sideways move between panels.
+    const onWheel = (e: WheelEvent) => {
+      if (sections.length < 2 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const inner = (e.target as HTMLElement | null)?.closest("[data-vscroll]") as HTMLElement | null;
+      if (inner && inner.scrollHeight > inner.clientHeight) {
+        const atTop = inner.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1 && e.deltaY > 0;
+        if (!atTop && !atBottom) return; // let a tall panel scroll itself first
+      }
+      e.preventDefault();
+      el.scrollBy({ left: e.deltaY, behavior: "auto" });
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const next = ["ArrowRight", "PageDown", " ", "Enter"].includes(e.key);
+      const prev = ["ArrowLeft", "PageUp"].includes(e.key);
+      if (!next && !prev && e.key !== "Home" && e.key !== "End") return;
+      e.preventDefault();
+      const cur = Math.round(el.scrollLeft / el.clientWidth);
+      goTo(e.key === "Home" ? 0 : e.key === "End" ? sections.length - 1 : cur + (next ? 1 : -1));
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("keydown", onKey);
+    return () => { el.removeEventListener("scroll", onScroll); el.removeEventListener("wheel", onWheel); window.removeEventListener("keydown", onKey); };
+  }, [goTo, sections.length]);
+
   return (
-    <div className="dark min-h-dvh bg-[oklch(0.13_0.02_265)] text-[oklch(0.96_0.01_85)] [font-feature-settings:'tnum']">
-      <div className="pit-hero flex min-h-dvh flex-col px-10 pb-8">
-        <header className="sticky top-0 z-20 -mx-10 flex items-center justify-between bg-[oklch(0.13_0.02_265)]/90 px-10 py-6 backdrop-blur">
+    <div className="dark h-dvh overflow-hidden bg-[oklch(0.13_0.02_265)] text-[oklch(0.96_0.01_85)] [font-feature-settings:'tnum']">
+      <div className="pit-hero flex h-dvh flex-col px-10 pb-5">
+        <header className="flex shrink-0 items-center justify-between py-5">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[oklch(0.8_0.15_75)]">Trading Pit · Live</p>
             <h1 className="font-heading text-4xl font-extrabold">{event.name}</h1>
@@ -64,20 +105,21 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
         </header>
 
         {shocked && !finished && (
-          <div className="sticky top-[7.5rem] z-10 mt-2 flex items-center gap-6 rounded-2xl bg-[oklch(0.62_0.22_25)] px-8 py-5 text-white shadow-2xl">
+          <div className="mb-3 flex shrink-0 items-center gap-6 rounded-2xl bg-[oklch(0.62_0.22_25)] px-8 py-4 text-white shadow-2xl">
             <span className="shrink-0 animate-pulse font-heading text-3xl font-extrabold uppercase tracking-[0.2em]">⚡ Breaking</span>
             <div className="min-w-0">
-              <p className="font-heading text-4xl font-extrabold leading-tight">{active!.shock_headline}</p>
-              {active!.shock_detail && <p className="mt-1 text-2xl text-white/85">{active!.shock_detail}</p>}
+              <p className="font-heading text-3xl font-extrabold leading-tight">{active!.shock_headline}</p>
+              {active!.shock_detail && <p className="mt-1 text-xl text-white/85">{active!.shock_detail}</p>}
             </div>
             {windowOpen && !!active!.shock_extend_sec && <span className="ml-auto shrink-0 text-2xl font-bold">+{active!.shock_extend_sec}s</span>}
           </div>
         )}
 
-        <main className="mt-6 flex-1 space-y-16">
+        {/* One panel per screen, side by side. Tall panels scroll up/down inside themselves. */}
+        <main ref={strip} className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {sections.map((v) => (
-            <section key={v} id={v} className="scroll-mt-40">
-              {sections.length > 1 && <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-white/40">{SECTION_LABEL[v]}</p>}
+            <section key={v} id={v} data-vscroll className="h-full w-full shrink-0 snap-start overflow-y-auto pr-1">
+              {sections.length > 1 && <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-white/40">{SECTION_LABEL[v]}</p>}
               {v === "leaderboard" && <Leaderboard leaders={leaders} spark={spark} finished={finished} lastRound={lastApplied?.round_no ?? null} />}
               {v === "headline" && <Headline active={active} windowOpen={windowOpen} secondsLeft={secondsLeft} />}
               {v === "prices" && <Prices companies={companies} />}
@@ -85,8 +127,19 @@ export function DisplayBoard({ host, event, rounds, companies, leaders, curve, p
           ))}
         </main>
 
-        <footer className="mt-10 text-sm text-white/40">
+        <footer className="flex shrink-0 items-center justify-between pt-3 text-sm text-white/40">
           <span>Join at <span className="font-mono text-white/70">{host}/play</span></span>
+          {sections.length > 1 && (
+            <nav aria-label="Panels" className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-widest">← → to move</span>
+              {sections.map((v, i) => (
+                <button key={v} type="button" onClick={() => goTo(i)} aria-label={SECTION_LABEL[v]} aria-current={i === index}
+                  className={cn("rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-widest transition", i === index ? "bg-[oklch(0.8_0.15_75)] text-black" : "bg-white/10 text-white/60 hover:bg-white/20")}>
+                  {SECTION_LABEL[v]}
+                </button>
+              ))}
+            </nav>
+          )}
         </footer>
       </div>
     </div>
@@ -105,7 +158,31 @@ function stateLabel(state: string | undefined) {
 }
 
 function Leaderboard({ leaders, spark, finished, lastRound }: { leaders: Leader[]; spark: Record<string, number[]>; finished: boolean; lastRound: number | null }) {
-  const top = leaders.slice(0, 12);
+  const top = leaders.slice(0, 20);
+  // Up to 8 teams: big rows with a trend line. More than that: two compact columns so 15–20 teams fit one screen.
+  const compact = top.length > 8;
+  const change = (l: Leader) => Number(l.change_this_round ?? 0);
+  if (compact) {
+    const rows = Math.ceil(top.length / 2);
+    return (
+      <ol className="grid grid-flow-col gap-x-6 gap-y-2" style={{ gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
+        {top.map((l, i) => {
+          const d = change(l);
+          return (
+            <li key={l.team_id} className={cn("grid grid-cols-[3rem_1fr_9rem_7.5rem] items-center gap-3 rounded-xl px-4 py-2 ring-1 ring-white/10", i === 0 ? "bg-[oklch(0.8_0.15_75)]/15 ring-[oklch(0.8_0.15_75)]/50" : "bg-white/[0.04]")}>
+              <span className={cn("font-heading text-3xl font-extrabold", i === 0 && "text-[oklch(0.8_0.15_75)]")}>{finished && i === 0 ? "🏆" : l.rank}</span>
+              <div className="min-w-0">
+                <p className="truncate font-heading text-2xl font-bold leading-tight">{l.name}</p>
+                {l.college && <p className="truncate text-sm text-white/50">{l.college}</p>}
+              </div>
+              <span className="num text-right font-mono text-2xl font-semibold">{compactRupees(l.total_value)}</span>
+              <span className={cn("num text-right font-mono text-xl", d > 0 && "text-[oklch(0.78_0.17_155)]", d < 0 && "text-[oklch(0.72_0.19_25)]", d === 0 && "text-white/40")}>{d === 0 ? "—" : `${d > 0 ? "▲" : "▼"} ${pct(l.change_this_round_pct, 1)}`}</span>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
   return (
     <div>
       <div className="mb-3 grid grid-cols-[4rem_1fr_14rem_12rem_10rem] items-end gap-4 px-6 text-sm uppercase tracking-[0.2em] text-white/50">
@@ -113,7 +190,7 @@ function Leaderboard({ leaders, spark, finished, lastRound }: { leaders: Leader[
       </div>
       <ol className="space-y-2">
         {top.map((l, i) => {
-          const d = Number(l.change_this_round ?? 0);
+          const d = change(l);
           return (
             <li key={l.team_id} className={cn("grid grid-cols-[4rem_1fr_14rem_12rem_10rem] items-center gap-4 rounded-2xl px-6 py-3 ring-1 ring-white/10", i === 0 ? "bg-[oklch(0.8_0.15_75)]/15 ring-[oklch(0.8_0.15_75)]/50" : "bg-white/[0.04]")}>
               <span className={cn("font-heading text-4xl font-extrabold", i === 0 && "text-[oklch(0.8_0.15_75)]")}>{finished && i === 0 ? "🏆" : l.rank}</span>

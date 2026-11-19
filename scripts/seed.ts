@@ -72,7 +72,7 @@ async function main() {
 
   const { data: teams, error: tErr } = await db
     .from("teams")
-    .insert(TEAMS.map(([name, captain, college]) => ({ event_id: event.id, name, college, member_names: [captain] })))
+    .insert(TEAMS.map(([name, captain, college]) => ({ event_id: event.id, name, college: college || null, member_names: captain ? [captain] : [] })))
     .select("name, join_code, member_names");
   if (tErr) throw tErr;
 

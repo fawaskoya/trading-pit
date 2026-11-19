@@ -12,7 +12,7 @@ type Event = Database["public"]["Tables"]["events"]["Row"];
 export function SettingsForm({ event }: { event: Event }) {
   const [values, setValues] = useState<EventFormValues>({
     name: event.name, starting_capital: Number(event.starting_capital), total_rounds: event.total_rounds, round_duration_sec: event.round_duration_sec,
-    fee_pct: Number(event.fee_pct), allow_short: event.allow_short, max_position_pct: Number(event.max_position_pct),
+    fee_pct: Number(event.fee_pct), allow_short: event.allow_short, max_position_pct: Number(event.max_position_pct), auto_apply_prices: event.auto_apply_prices,
   });
   const [pending, start] = useTransition();
   const [confirm, setConfirm] = useState(false);

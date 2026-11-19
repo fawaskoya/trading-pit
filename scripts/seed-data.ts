@@ -28,7 +28,7 @@ export const COMPANIES: [string, string, string, number][] = [
 // round after explains what went wrong. Rounds 4, 7 and 9 also carry an Act of God the organiser fires
 // mid-window. `moves` are the organiser's private end-of-round hints (% by ticker).
 export type Shock = { headline: string; detail: string; moves: Record<string, number>; extend_sec: number };
-export const HEADLINES: { headline: string; detail: string; moves: Record<string, number>; shock?: Shock }[] = [
+const BASE_HEADLINES: { headline: string; detail: string; moves: Record<string, number>; shock?: Shock }[] = [
   {
     headline: "Union Budget unveils ₹11 lakh crore infrastructure push",
     detail: "Record capex on roads, ports and housing. Cement, construction and logistics names expected to benefit.",
@@ -99,6 +99,57 @@ export const HEADLINES: { headline: string; detail: string; moves: Record<string
   },
 ];
 
+// An Act of God is ready in every round, so the organiser can fire one whenever the mood needs it. They're
+// written to hurt whoever followed the obvious trade (heavy losses, a few small hedges) and are editable
+// in the control room before firing. Rounds 4, 7 and 9 carry their own, above.
+const EXTRA_SHOCKS: Record<number, Shock> = {
+  1: {
+    headline: "Surprise windfall tax on infrastructure contractors",
+    detail: "The finance ministry slaps a one-time 18% levy on profits from public projects, effective immediately. Contractors scramble to re-price their order books.",
+    moves: { LT: -9, ULTRACEMCO: -8, ADANIPORTS: -10, COALINDIA: -3, SUNPHARMA: 2 },
+    extend_sec: 60,
+  },
+  2: {
+    headline: "Competition Commission raids cement makers and L&T offices",
+    detail: "Dawn raids over alleged bid-rigging on highway tenders; officials seize documents and servers. Tender awards are put on hold.",
+    moves: { LT: -12, ULTRACEMCO: -11, ADANIPORTS: -4, HUL: 1 },
+    extend_sec: 60,
+  },
+  3: {
+    headline: "TCS confirms data leak at its European banking client",
+    detail: "Regulators freeze the new contract pending a security audit. Rival IT firms face the same questions from their own clients.",
+    moves: { TCS: -11, INFY: -5, WIPRO: -4, HDFCBANK: 1 },
+    extend_sec: 60,
+  },
+  5: {
+    headline: "₹9,000 crore fraud uncovered at a large private bank",
+    detail: "A forensic audit finds fictitious loans booked over three years. The central bank orders a sector-wide asset-quality review.",
+    moves: { ICICIBANK: -10, HDFCBANK: -8, AXISBANK: -12, MARUTI: -3, TATAMOTORS: -3 },
+    extend_sec: 60,
+  },
+  6: {
+    headline: "RBI calls an emergency meeting and signals it may reverse the rate cut",
+    detail: "The rupee slides to a record low and imported inflation jumps. Car loans and dealer financing tighten overnight.",
+    moves: { MARUTI: -9, TATAMOTORS: -10, BAJAJAUTO: -8, ULTRACEMCO: -5, SUNPHARMA: 2 },
+    extend_sec: 60,
+  },
+  8: {
+    headline: "Government caps prices on packaged food and edible oils",
+    detail: "A surprise ordinance limits retail prices to curb food inflation. Consumer-goods makers say margins will be squeezed hard.",
+    moves: { HUL: -9, NESTLEIND: -10, ITC: -7, BAJAJAUTO: -3, SUNPHARMA: 2 },
+    extend_sec: 60,
+  },
+  10: {
+    headline: "Exit-poll flip: opposition surges, Sensex futures crash 6%",
+    detail: "Late exit polls point to a hung result. Foreign funds dump Indian equities at the open; only defensives hold.",
+    moves: { RELIANCE: -9, HDFCBANK: -10, ICICIBANK: -10, TCS: -6, INFY: -6, LT: -11, ADANIPORTS: -13, MARUTI: -7, COALINDIA: -4, SUNPHARMA: 3, ITC: 2 },
+    extend_sec: 60,
+  },
+};
+
+export const HEADLINES = BASE_HEADLINES.map((h, i) => ({ ...h, shock: h.shock ?? EXTRA_SHOCKS[i + 1] }));
+
+
 export const fmtMoves = (m: Record<string, number>) => Object.entries(m).map(([t, p]) => `${t} ${p > 0 ? "+" : ""}${p}%`).join(", ");
 
 // Each team trades as a company named after its chest number. [chest, captain, college]
@@ -113,4 +164,10 @@ export const TEAMS = [
   ["SPC-08", "Ananya M", "School of Management Studies, Palakkad"],
   ["SPC-09", "Abdul Basith", "MBITS"],
   ["SPC-10", "Tom Philip", "Girideepam Institute of Advanced Learning"],
+  // Spare chest numbers for late registrations: rename or add the captain/college on the Teams page.
+  ["SPC-11", "", ""],
+  ["SPC-12", "", ""],
+  ["SPC-13", "", ""],
+  ["SPC-14", "", ""],
+  ["SPC-15", "", ""],
 ];

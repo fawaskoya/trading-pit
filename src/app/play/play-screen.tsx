@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Lock, Newspaper, Trophy, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { AuthWatch } from "@/components/auth-watch";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Countdown } from "@/components/countdown";
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { LeaveTeamButton } from "./leave-team-button";
 import { TradeDrawer } from "./trade-drawer";
 import { HistoryTab } from "./history-tab";
+import { HeadlineFeed } from "./headline-feed";
 
 export type Team = Database["public"]["Tables"]["teams"]["Row"];
 export type Event = Database["public"]["Tables"]["events"]["Row"];
@@ -84,6 +86,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
 
   if (initial) return (
     <div className="flex min-h-dvh flex-col">
+      <AuthWatch role="team" />
       <header className="border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <Logo href="/play" />
@@ -113,6 +116,7 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
 
   return (
     <div className="min-h-dvh pb-24">
+      <AuthWatch role="team" />
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between px-4 lg:max-w-6xl">
           <Logo href="/play" />
@@ -127,7 +131,8 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
       {/* Phone: one column. Laptop: portfolio + headline stay pinned on the left, market on the right.
           Before trading opens there is no market, so it's one centred column everywhere. */}
       <main className={cn("mx-auto max-w-lg px-4 pt-4 lg:pt-6", marketOpen && "lg:grid lg:max-w-6xl lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6")}>
-        <div className={cn("space-y-4", marketOpen && "lg:sticky lg:top-20")}>
+        {/* On a laptop this column stays in view and scrolls on its own, so a long headline feed never pushes the portfolio away. */}
+        <div className={cn("space-y-4", marketOpen && "lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pb-4 lg:pr-1")}>
 
         {/* Portfolio hero */}
         <Card className="pit-hero overflow-hidden p-5">
@@ -194,6 +199,9 @@ export function PlayScreen({ team, event, companies, rounds, holdings, me, order
           )}
           <StateBanner state={active?.state ?? null} open={tradingOpen} finished={finished} secondsLeft={secondsLeft} marketOpen={marketOpen} />
         </Card>
+
+        {/* Newest headline is the card above; earlier rounds sit below it, newest first. */}
+        <HeadlineFeed rounds={rounds} excludeId={active && active.state !== "pending" ? active.id : null} />
 
         </div>
 

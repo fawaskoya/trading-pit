@@ -4,6 +4,11 @@ import { organiserLoginPath } from "@/lib/paths";
 
 /** Refreshes the auth session on every request and mirrors the cookies to the response. */
 export async function updateSession(request: NextRequest) {
+  // The projector and the clock endpoint never need a login. Skipping them means a projector refreshing every few
+  // seconds can never race the organiser's or a team's token refresh.
+  const p = request.nextUrl.pathname;
+  if (p.startsWith("/display") || p.startsWith("/api/time")) return NextResponse.next({ request });
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

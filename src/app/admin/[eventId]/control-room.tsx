@@ -13,7 +13,7 @@ import { Countdown } from "@/components/countdown";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
 import { compactRupees, integer, pct, price as fmtPrice, rupees } from "@/lib/format";
 import type { RoundNotes } from "@/lib/round-notes";
-import { suggestedMovesByTicker } from "@/lib/suggested-moves";
+import { parseSuggestedMoves, suggestedMovesByTicker } from "@/lib/suggested-moves";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
@@ -178,16 +178,27 @@ function ActiveRound({ event, round, companies, pending, run, onZero }: {
           </Step>
         )}
         {s === "window_open" && (
-          <Step hint="Trading is live. The window closes on its own at 0:00 — use this only to end it early.">
+          <Step hint={windowHint(event, round)}>
             <Button size="lg" variant="destructive" disabled={pending} onClick={() => run("Window closed", () => closeWindow(round.id))}>
               <Square /> Close window now
             </Button>
           </Step>
         )}
-        {s === "window_closed" && <PriceEditor round={round} companies={companies} pending={pending} run={run} />}
+        {s === "window_closed" && <PriceEditor round={round} companies={companies} pending={pending} run={run} auto={event.auto_apply_prices} />}
       </div>
     </Card>
   );
+}
+
+/** What happens when this round's window closes, in plain words. */
+function windowHint(event: Event, round: Round) {
+  const planned = parseSuggestedMoves(round.suggested_moves).moves.length;
+  const base = "Trading is live. The window closes on its own at 0:00";
+  if (round.shock_at) return `${base}. The Act of God already moved prices, so you'll finish the round with one click.`;
+  if (!event.auto_apply_prices) return `${base} — then you review and apply prices yourself.`;
+  return planned
+    ? `${base}, and this round's ${planned} planned price move${planned === 1 ? "" : "s"} apply automatically. Fire the Act of God below to change the mood instead.`
+    : `${base}. No price moves are planned for this round, so prices stay as they are.`;
 }
 
 function Step({ hint, children }: { hint: string; children: React.ReactNode }) {
@@ -376,8 +387,8 @@ function PriceTable({ table, companies }: { table: PriceTableState; companies: C
             <button key={m} type="button" onClick={() => table.setMode(m)} className={cn("rounded px-2 py-1", mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{m === "pct" ? "% change" : "₹ price"}</button>
           ))}
         </div>
-        {Object.keys(suggested).length > 0 && <Button variant="secondary" size="sm" onClick={table.fill}><Wand2 /> Fill suggested</Button>}
-        <Button variant="ghost" size="sm" onClick={table.clear}>Clear</Button>
+        {Object.keys(suggested).length > 0 && <Button variant="ghost" size="sm" onClick={table.fill}><Wand2 /> Reset to plan</Button>}
+        <Button variant="ghost" size="sm" onClick={table.clear}>Clear all</Button>
       </div>
       <div className="max-h-[440px] overflow-auto rounded-lg border">
         <Table>
@@ -418,19 +429,38 @@ function PriceTable({ table, companies }: { table: PriceTableState; companies: C
   );
 }
 
-function PriceEditor({ round, companies, pending, run }: { round: Round; companies: Company[]; pending: boolean; run: Run }) {
-  const table = usePriceTable(companies, round.suggested_moves);
+/**
+ * Normally a round finishes by itself when the window closes, so this only appears after an Act of God
+ * (prices are already set: one click to finish) or when automation is switched off (the plan is prefilled).
+ */
+function PriceEditor({ round, companies, pending, run, auto }: { round: Round; companies: Company[]; pending: boolean; run: Run; auto: boolean }) {
+  const shocked = !!round.shock_at;
+  const table = usePriceTable(companies, round.suggested_moves, !shocked);
+  const [showTable, setShowTable] = useState(!shocked);
+  const apply = () => run(shocked ? "Round finished" : "Prices applied", () => applyPrices(round.id, table.changes.map(({ c, np }) => ({ company_id: c.id, new_price: np! }))));
   return (
     <div className="space-y-3">
-      <div>
-        <p className="font-semibold">Enter new prices</p>
-        <p className="text-sm text-muted-foreground">Leave a company blank to keep its price. Only companies the headline affects should move.</p>
-      </div>
-      <PriceTable table={table} companies={companies} />
+      {shocked ? (
+        <div className="rounded-lg border border-loss/30 bg-loss-soft/50 p-4">
+          <p className="font-semibold">The Act of God already moved prices</p>
+          <p className="text-sm text-muted-foreground">Nothing more is needed — finish the round as it stands. Prices on every screen are final unless you add extra moves.</p>
+        </div>
+      ) : (
+        <div>
+          <p className="font-semibold">{auto ? "Review the planned prices" : "Review the prices, then apply"}</p>
+          <p className="text-sm text-muted-foreground">The % changes from your plan are already filled in. Edit any number, or leave a company blank to keep its price.</p>
+        </div>
+      )}
+      {shocked && (
+        <button type="button" className="text-sm text-primary underline-offset-4 hover:underline" onClick={() => setShowTable(!showTable)}>
+          {showTable ? "Hide extra price moves" : "Add extra price moves (optional)"}
+        </button>
+      )}
+      {showTable && <PriceTable table={table} companies={companies} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{table.changes.length} of {companies.length} companies will move.</p>
-        <Button size="lg" disabled={pending} onClick={() => run("Prices applied", () => applyPrices(round.id, table.changes.map(({ c, np }) => ({ company_id: c.id, new_price: np! }))))}>
-          <Check /> Apply prices & finish round {round.round_no}
+        <p className="text-sm text-muted-foreground">{table.changes.length ? `${table.changes.length} of ${companies.length} companies will move.` : "No further price changes."}</p>
+        <Button size="lg" disabled={pending} onClick={apply}>
+          <Check /> {shocked ? `Finish round ${round.round_no}` : `Apply prices & finish round ${round.round_no}`}
         </Button>
       </div>
     </div>
